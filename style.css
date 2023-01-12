@@ -1,0 +1,17 @@
+html,
+body {
+    height: 100%;
+    padding: 0;
+    margin: 10px;
+    color: orangered;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+a {
+    color: orangered;
+    text-transform: uppercase;
+}
+
+header {
+    margin-bottom: 30px;
+}
