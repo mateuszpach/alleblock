@@ -5,8 +5,7 @@ use ink_lang as ink;
 #[ink::contract]
 mod alleblock {
     use ink_prelude::{string::String, vec::Vec};
-    use ink_storage::traits::{SpreadAllocate, PackedLayout, SpreadLayout};
-    use ink_storage::Mapping;
+    use ink_storage::traits::{PackedLayout, SpreadLayout};
 
     #[derive(PackedLayout,SpreadLayout, Debug, PartialEq, Eq, scale::Encode, scale::Decode, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -16,6 +15,14 @@ mod alleblock {
         Finished
     }
 
+    #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
+    #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
+    pub enum Error {
+        TooLowBidError,
+        TooLowFeeError,
+        AfterFinishDateError,
+        AuctionNotInProgressError
+    }
 
     #[derive(PackedLayout, SpreadLayout, scale::Encode, scale::Decode, Clone, Debug)]
     #[cfg_attr(feature = "std", derive(::scale_info::TypeInfo))]
@@ -33,38 +40,51 @@ mod alleblock {
     
 
     #[ink(storage)]
-    // #[derive(SpreadAllocate)]
     pub struct Alleblock {
-        // auctions: Mapping<u128, AuctionInfo>,
-        auctions: Vec<AuctionInfo>
+        /// list of all contract's auctions
+        auctions: Vec<AuctionInfo>,
+
+        /// fee for creating the auction
+        create_auction_fee: u128,
+
+        /// fraction of the final price that contract takes as fee
+        /// the contract will take actual_bid/finalize_fee currency
+        finalize_fee: u32,
     }
 
-    use ink_lang::utils::initialize_contract;
+    /// result type
+    pub type Result<T> = core::result::Result<T, Error>;
+
     impl Alleblock {
+        /// constructor setting height of the fees
         #[ink(constructor)]
-        pub fn new() -> Self {
-            Self { auctions: Vec::new() }
+        pub fn new(create_auction_fee: u128, finalize_fee: u32) -> Self {
+            Self { 
+                auctions: Vec::new(),
+                create_auction_fee,
+                finalize_fee
+             }
+        }
+
+        #[ink(message, payable)]
+        pub fn create_auction(&mut self, starting_price: u128, description: String, duration: u128) -> Result<()> {
+            return Ok(())
+        }
+
+        #[ink(message, payable)]
+        pub fn bid(&mut self, auction_id: u128) -> Result<()> {
+            return Ok(())
         }
 
         #[ink(message)]
-        pub fn create_auction(&mut self, starting_price: u128, description: String, duration: u128) {
-            
-        }
-
-        #[ink(message)]
-        pub fn bid(&mut self, auction_id: u128) {
-            
-        }
-
-        #[ink(message)]
-        pub fn finish_auction(&mut self, auction_id: u128) {
-            
+        pub fn finish_auction(&mut self, auction_id: u128) -> Result<()> {
+            return Ok(())
         }
 
 
-        #[ink(message)]
-        pub fn terminate_auction(&mut self, auction_id: u128) {
-            
+        #[ink(message, payable)]
+        pub fn terminate_auction(&mut self, auction_id: u128) -> Result<()> {
+            return Ok(())
         }
 
         #[ink(message)]
