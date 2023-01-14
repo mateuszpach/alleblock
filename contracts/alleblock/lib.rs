@@ -237,6 +237,18 @@ mod alleblock {
         pub fn get_auctions(&self) -> Vec<AuctionInfo> {
             return self.auctions.clone();
         }
+
+        /// return fee needed to crate an auction
+        #[ink(message)]
+        pub fn get_create_auction_fee(&self) -> u128 {
+            return self.create_auction_fee.clone();
+        }
+
+        /// return fee taken from finalized auction
+        #[ink(message)]
+        pub fn get_finalize_fee(&self) -> u32 {
+            return self.finalize_fee.clone();
+        }
     }
 
     #[cfg(test)]
