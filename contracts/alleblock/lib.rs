@@ -203,6 +203,11 @@ mod alleblock {
                 None => return Err(Error::NoSuchAuctionError)
             };
 
+            // check if auction is in progress
+            if auction.auction_state != AuctionState::InProgress {
+                return Err(Error::AuctionNotInProgressError);
+            }
+
             // check if auction creator is the caller
             if caller != auction.creator {
                 return Err(Error::NotACreatorError);
@@ -297,7 +302,7 @@ mod alleblock {
         }
 
         #[ink::test]
-        fn adding_auctions_test() {
+        fn create_auction_test() {
             let mut contract = Alleblock::new(1, 2);
             let accounts = 
                 ink_env::test::default_accounts::<DefaultEnvironment>();
@@ -350,49 +355,6 @@ mod alleblock {
         }
         
         #[ink::test]
-        fn finish_fee_test() {
-            let mut contract = Alleblock::new(10, 20);
-            let accounts = 
-                ink_env::test::default_accounts::<DefaultEnvironment>();
-            
-            set_caller(accounts.bob, Some(1000));
-            set_transfer(10);
-            assert_eq!( contract.create_auction(5, "auction 1".to_string(), 3), Ok(0));
-            
-            set_caller(accounts.alice, Some(1000));
-            set_transfer(500);
-            assert_eq!(contract.bid(0), Ok(()));
-
-            set_caller(accounts.bob, None);
-            ink_env::test::advance_block::<DefaultEnvironment>();
-            assert_eq!( contract.finish_auction(0), Ok(()));
-            assert_balance_equals(accounts.bob, 1000+500-500/20);
-        }
-        
-        #[ink::test]
-        fn cancel_fee_test() {
-            let mut contract = Alleblock::new(10, 20);
-            let accounts = 
-                ink_env::test::default_accounts::<DefaultEnvironment>();
-            
-            set_caller(accounts.bob, Some(1000));
-            set_transfer(10);
-            assert_eq!( contract.create_auction(5, "auction 1".to_string(), 3), Ok(0));
-            
-            set_caller(accounts.alice, Some(1000));
-            set_transfer(500);
-            assert_eq!(contract.bid(0), Ok(()));
-
-            set_caller(accounts.bob, None);
-            let fee = 500/20;
-            set_transfer(fee-1);
-            assert_eq!( contract.cancel_auction(0), Err(Error::TooLowFeeError));
-            set_transfer(fee);
-            assert_eq!( contract.cancel_auction(0), Ok(()));
-            assert_balance_equals(accounts.alice, 1500);
-        }
-
-        #[ink::test]
         fn bid_state_errors_test() {
             let mut contract = Alleblock::new(10, 20);
             let accounts = 
@@ -417,6 +379,7 @@ mod alleblock {
             assert_eq!(contract.bid(3), Err(Error::AfterFinishDateError));
 
             assert_eq!(accounts.alice, contract.get_auctions()[0].actual_winner);
+            assert_eq!(AuctionState::InProgress, contract.get_auctions()[0].auction_state);
         }
 
         #[ink::test]
@@ -453,9 +416,107 @@ mod alleblock {
             assert_eq!(501, contract.get_auctions()[0].actual_bid);
             assert_balance_equals(accounts.alice, 1506);
 
-            assert_eq!(contract.get_auctions()[0].auction_state, AuctionState::InProgress)
         }
 
+        #[ink::test]
+        fn finalize_state_errors_test() {
+            let mut contract = Alleblock::new(10, 20);
+            let accounts = 
+                ink_env::test::default_accounts::<DefaultEnvironment>();
+            
+            set_caller(accounts.bob, Some(1000));
+            set_transfer(10);
+            assert_eq!( contract.create_auction(5, "auction before deadline".to_string(), 100), Ok(0));
+            assert_eq!( contract.create_auction(5, "cancelled auction".to_string(), 100), Ok(1));
+            assert_eq!( contract.create_auction(5, "auction after deadline".to_string(), 3), Ok(2));
+            assert_eq!( contract.create_auction(5, "auction after deadline - other finishes".to_string(), 3), Ok(3));
+            
+            ink_env::test::advance_block::<DefaultEnvironment>();
+            assert_eq!( contract.cancel_auction(1), Ok(()));
+
+            set_caller(accounts.alice, Some(1000));
+            assert_eq!(contract.finish_auction(3), Ok(()));
+
+            set_caller(accounts.bob, None);
+            assert_eq!(contract.finish_auction(0), Err(Error::BeforeFinishDateError));
+            assert_eq!(contract.finish_auction(1), Err(Error::AuctionNotInProgressError));
+            assert_eq!(contract.finish_auction(2), Ok(()));
+            assert_eq!(contract.finish_auction(2), Err(Error::AuctionNotInProgressError));
+
+            assert_eq!(AuctionState::Finished, contract.get_auctions()[2].auction_state);
+        }
+
+        #[ink::test]
+        fn finish_behaviour_test() {
+            let mut contract = Alleblock::new(10, 20);
+            let accounts = 
+                ink_env::test::default_accounts::<DefaultEnvironment>();
+            
+            set_caller(accounts.bob, Some(1000));
+            set_transfer(10);
+            assert_eq!( contract.create_auction(5, "auction 1".to_string(), 3), Ok(0));
+            
+            set_caller(accounts.alice, Some(1000));
+            set_transfer(500);
+            assert_eq!(contract.bid(0), Ok(()));
+
+            set_caller(accounts.bob, None);
+            ink_env::test::advance_block::<DefaultEnvironment>();
+            assert_eq!( contract.finish_auction(0), Ok(()));
+            assert_balance_equals(accounts.bob, 1000+500-500/20);
+        }
+
+        #[ink::test]
+        fn cancel_state_errors_test() {
+            let mut contract = Alleblock::new(10, 20);
+            let accounts = 
+                ink_env::test::default_accounts::<DefaultEnvironment>();
+            
+            set_caller(accounts.bob, Some(1000));
+            set_transfer(10);
+            assert_eq!( contract.create_auction(5, "auction before deadline".to_string(), 100), Ok(0));
+            assert_eq!( contract.create_auction(5, "finished auction".to_string(), 3), Ok(1));
+            assert_eq!( contract.create_auction(5, "auction after deadline".to_string(), 3), Ok(2));
+            
+            ink_env::test::advance_block::<DefaultEnvironment>();
+            assert_eq!( contract.finish_auction(1), Ok(()));
+
+            set_caller(accounts.alice, Some(1000));
+            assert_eq!(contract.cancel_auction(0), Err(Error::NotACreatorError));
+            assert_eq!(contract.cancel_auction(2), Err(Error::NotACreatorError));
+
+            set_caller(accounts.bob, None);
+            assert_eq!(contract.cancel_auction(0), Ok(()));
+            assert_eq!(contract.cancel_auction(1), Err(Error::AuctionNotInProgressError));
+            assert_eq!(contract.cancel_auction(2), Ok(()));
+            assert_eq!(contract.cancel_auction(2), Err(Error::AuctionNotInProgressError));
+
+            assert_eq!(AuctionState::Cancelled, contract.get_auctions()[0].auction_state);
+            assert_eq!(AuctionState::Cancelled, contract.get_auctions()[2].auction_state);
+        }
+        
+        #[ink::test]
+        fn cancel_behaviour_test() {
+            let mut contract = Alleblock::new(10, 20);
+            let accounts = 
+                ink_env::test::default_accounts::<DefaultEnvironment>();
+            
+            set_caller(accounts.bob, Some(1000));
+            set_transfer(10);
+            assert_eq!( contract.create_auction(5, "auction 1".to_string(), 3), Ok(0));
+            
+            set_caller(accounts.alice, Some(1000));
+            set_transfer(500);
+            assert_eq!(contract.bid(0), Ok(()));
+
+            set_caller(accounts.bob, None);
+            let fee = 500/20;
+            set_transfer(fee-1);
+            assert_eq!( contract.cancel_auction(0), Err(Error::TooLowFeeError));
+            set_transfer(fee);
+            assert_eq!( contract.cancel_auction(0), Ok(()));
+            assert_balance_equals(accounts.alice, 1500);
+        }
 
     }
 }
