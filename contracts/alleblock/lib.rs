@@ -61,13 +61,15 @@ mod alleblock {
 
     impl Alleblock {
         /// constructor setting height of the fees
+        /// finalize_fee shouldn't be set to 0
         #[ink(constructor)]
-        pub fn new(create_auction_fee: u128, finalize_fee: u32) -> Self {
+        pub fn new(create_auction_fee: u128, _finalize_fee: u32) -> Self {
+            let finalize_fee = if _finalize_fee == 0 {1} else {_finalize_fee};
             Self { 
                 auctions: Vec::new(),
                 create_auction_fee,
                 finalize_fee
-             }
+            }
         }
 
         /// message used to create a brand new auction
@@ -125,7 +127,7 @@ mod alleblock {
             }
 
             // check if enough money is transferred
-            if transferred_value <= auction.actual_bid || transferred_value <= auction.minimal_bid {
+            if transferred_value <= auction.actual_bid || transferred_value < auction.minimal_bid {
                 return Err(Error::TooLowBidError);
             }
 
