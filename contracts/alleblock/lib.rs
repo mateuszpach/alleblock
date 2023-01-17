@@ -395,14 +395,14 @@ mod alleblock {
             assert_eq!( contract.create_auction(5, "auction".to_string(), 100), Ok(0));
             
             set_caller(accounts.alice, Some(1000));
-            set_transfer(5);
+            set_transfer(4);
             assert_eq!(contract.bid(0), Err(Error::TooLowBidError));
             assert_eq!(accounts.bob, contract.get_auctions()[0].actual_winner);
             assert_eq!(0, contract.get_auctions()[0].actual_bid);
-            set_transfer(6);
+            set_transfer(5);
             assert_eq!(contract.bid(0), Ok(()));
             assert_eq!(accounts.alice, contract.get_auctions()[0].actual_winner);
-            assert_eq!(6, contract.get_auctions()[0].actual_bid);
+            assert_eq!(5, contract.get_auctions()[0].actual_bid);
             set_transfer(500);
             assert_eq!(contract.bid(0), Ok(()));
             assert_eq!(500, contract.get_auctions()[0].actual_bid);
@@ -416,7 +416,7 @@ mod alleblock {
             assert_eq!(contract.bid(0), Ok(()));
             assert_eq!(accounts.charlie, contract.get_auctions()[0].actual_winner);
             assert_eq!(501, contract.get_auctions()[0].actual_bid);
-            assert_balance_equals(accounts.alice, 1506);
+            assert_balance_equals(accounts.alice, 1505);
 
         }
 
