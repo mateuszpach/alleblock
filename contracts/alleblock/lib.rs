@@ -220,6 +220,7 @@ mod alleblock {
         pub fn cancel_auction(&mut self, auction_id: u64) -> Result<()> {
             let caller = self.env().caller();
             let transferred_value = self.env().transferred_value();
+            let block_timestamp = self.env().block_timestamp();
 
             let auction = match self.auctions.get(auction_id as usize) {
                 Some(x) => x,
@@ -234,6 +235,11 @@ mod alleblock {
             // check if auction creator is the caller
             if caller != auction.creator {
                 return Err(Error::NotACreatorError);
+            }
+
+            // perform only before auction finish date
+            if block_timestamp > auction.finish_date {
+                return Err(Error::AfterFinishDateError);
             }
 
             // if anyone has bid an auction
