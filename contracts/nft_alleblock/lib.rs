@@ -93,6 +93,7 @@ mod nft_alleblock {
         /// duration -- duration of auction in seconds, after creating the auction, everyone can bid for <duration> seconds
         /// nft_contract -- account of the origin contract of the nft to be auctioned (None if not selling nft)
         /// token_id -- id of the token to be auctioned (None if not selling nft)
+        /// Note: if you want to create auction with nft, you first need to allow auction contract to transfer it
         #[ink(message, payable)]
         pub fn create_auction(&mut self, 
             starting_bid: u128,
