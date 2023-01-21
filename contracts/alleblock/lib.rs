@@ -24,7 +24,7 @@ mod alleblock {
         BeforeFinishDateError,
         AuctionNotInProgressError,
         NoSuchAuctionError,
-        NotACreatorError,
+        NotAnOwnerError,
         TransferError
     }
 
@@ -32,11 +32,11 @@ mod alleblock {
     #[cfg_attr(feature = "std", derive(::scale_info::TypeInfo))]
     pub struct AuctionInfo {
         pub id: u64,
-        pub creator: AccountId,
+        pub owner: AccountId,
         pub description: String,
-        pub minimal_bid: u128,
-        pub current_bid: u128,
-        pub current_winner: AccountId,
+        pub starting_bid: u128,
+        pub highest_bid: u128,
+        pub highest_bidder: AccountId,
         pub creation_date: Timestamp,
         pub finish_date: Timestamp,
         pub auction_state: AuctionState
@@ -52,7 +52,7 @@ mod alleblock {
         create_auction_fee: u128,
 
         /// fraction of the final price that contract takes as fee
-        /// the contract will take <current_bid>/<finalize_fee> currency
+        /// the contract will take <highest_bid>/<finalize_fee_interest> currency
         finalize_fee_interest: u32,
 
         /// account of the owner of this contract
@@ -78,11 +78,11 @@ mod alleblock {
         }
 
         /// message used to create a brand new auction
-        /// minimal_bid -- lowest price at which the item can be sold (in the smallest chunk of currency, eg. picoTZERO)
+        /// starting_bid -- lowest price at which the item can be sold (in the smallest chunk of currency, eg. picoTZERO)
         /// description -- description of item or service
         /// duration -- duration of auction in seconds, after creating the auction, everyone can bid for <duration> seconds
         #[ink(message, payable)]
-        pub fn create_auction(&mut self, minimal_bid: u128, description: String, duration: u64) -> Result<u64> {
+        pub fn create_auction(&mut self, starting_bid: u128, description: String, duration: u64) -> Result<u64> {
             let transferred_value = self.env().transferred_value();
 
             // check if paid fee is high enough
@@ -102,11 +102,11 @@ mod alleblock {
 
             let fresh_auction = AuctionInfo {
                 id: auction_id,
-                creator: self.env().caller(),
+                owner: self.env().caller(),
                 description,
-                minimal_bid,
-                current_bid: 0,
-                current_winner: self.env().caller(),
+                starting_bid,
+                highest_bid: 0,
+                highest_bidder: self.env().caller(),
                 creation_date,
                 finish_date,
                 auction_state: AuctionState::InProgress
@@ -141,13 +141,13 @@ mod alleblock {
             }
 
             // check if enough money is transferred
-            if transferred_value <= auction.current_bid || transferred_value < auction.minimal_bid {
+            if transferred_value <= auction.highest_bid || transferred_value < auction.starting_bid {
                 return Err(Error::TooLowBidError);
             }
 
-            // transfer money back to the previous winner
-            if auction.current_bid > 0 {
-                if self.env().transfer(auction.current_winner, auction.current_bid).is_err() {
+            // transfer money back to the previous bidder
+            if auction.highest_bid > 0 {
+                if self.env().transfer(auction.highest_bidder, auction.highest_bid).is_err() {
                     return Err(Error::TransferError);
                 }
             }
@@ -157,8 +157,8 @@ mod alleblock {
                 Some(x) => x,
                 None => return Err(Error::NoSuchAuctionError)
             };
-            auction_mut.current_winner = caller;
-            auction_mut.current_bid = transferred_value;
+            auction_mut.highest_bidder = caller;
+            auction_mut.highest_bid = transferred_value;
 
             return Ok(());
         }
@@ -187,11 +187,11 @@ mod alleblock {
             }
 
             // if anyone bid the auction
-            if auction.current_bid > 0 {
-                let service_fee = auction.current_bid.div_euclid(self.finalize_fee_interest as u128);
+            if auction.highest_bid > 0 {
+                let service_fee = auction.highest_bid.div_euclid(self.finalize_fee_interest as u128);
 
-                // transfer money to the auction creator
-                if self.env().transfer(auction.creator, auction.current_bid - service_fee).is_err() {
+                // transfer money to the auction owner
+                if self.env().transfer(auction.owner, auction.highest_bid - service_fee).is_err() {
                     return Err(Error::TransferError);
                 }
 
@@ -212,9 +212,9 @@ mod alleblock {
         }
 
         /// cancel an auction 
-        /// only auction creator can call this message
+        /// only auction owner can call this message
         /// money is returned to the bidder
-        /// creator has to pay the fee
+        /// owner has to pay the fee
         /// changes auction stated to Cancelled
         #[ink(message, payable)]
         pub fn cancel_auction(&mut self, auction_id: u64) -> Result<()> {
@@ -232,9 +232,9 @@ mod alleblock {
                 return Err(Error::AuctionNotInProgressError);
             }
 
-            // check if auction creator is the caller
-            if caller != auction.creator {
-                return Err(Error::NotACreatorError);
+            // check if auction owner is the caller
+            if caller != auction.owner {
+                return Err(Error::NotAnOwnerError);
             }
 
             // perform only before auction finish date
@@ -243,15 +243,15 @@ mod alleblock {
             }
 
             // if anyone has bid an auction
-            if auction.current_bid > 0 {
+            if auction.highest_bid > 0 {
                 // check if fee is high enough
-                let service_fee = auction.current_bid.div_euclid(self.finalize_fee_interest as u128);
+                let service_fee = auction.highest_bid.div_euclid(self.finalize_fee_interest as u128);
                 if transferred_value < service_fee {
                     return Err(Error::TooLowFeeError);
                 }
 
-                // return the money to the current winner
-                if self.env().transfer(auction.current_winner, auction.current_bid).is_err() {
+                // return the money to the highest bidder
+                if self.env().transfer(auction.highest_bidder, auction.highest_bid).is_err() {
                     return Err(Error::TransferError);
                 }
             }
@@ -296,7 +296,7 @@ mod alleblock {
                 Some(x) => x,
                 None => return Err(Error::NoSuchAuctionError)
             };
-            return Ok(auction.current_bid.div_euclid(self.finalize_fee_interest as u128));
+            return Ok(auction.highest_bid.div_euclid(self.finalize_fee_interest as u128));
         }
 
         /// return owner of the contract who receives all the fees
