@@ -41,14 +41,16 @@ fn assert_call_result_eq<T: PartialEq + Debug>(
 
 #[ink::test]
 fn creation_test() {
-    let contract = Alleblock::new(1, 2);
+    let accounts = ink_env::test::default_accounts::<DefaultEnvironment>();
+    let contract = Alleblock::new(1, 2, accounts.django);
     assert_eq!(contract.get_create_auction_fee(), 1);
-    assert_eq!(contract.get_finalize_fee(), 2);
+    assert_eq!(contract.get_finalize_fee_interest(), 2);
+    assert_eq!(contract.get_contract_owner(), accounts.django);
 }
 
 #[ink::test]
 fn no_such_auction_test() {
-    let mut contract = Alleblock::new(1, 2);
+    let mut contract = Alleblock::new(1, 2, ink_env::account_id::<DefaultEnvironment>());
     assert_call_result_eq(contract.bid(0), Err(Error::NoSuchAuctionError));
     assert_call_result_eq(contract.finish_auction(0), Err(Error::NoSuchAuctionError));
     assert_call_result_eq(contract.cancel_auction(0), Err(Error::NoSuchAuctionError));
@@ -56,7 +58,7 @@ fn no_such_auction_test() {
 
 #[ink::test]
 fn create_auction_test() {
-    let mut contract = Alleblock::new(1, 2);
+    let mut contract = Alleblock::new(1, 2, ink_env::account_id::<DefaultEnvironment>());
     let accounts = ink_env::test::default_accounts::<DefaultEnvironment>();
 
     set_caller_and_update_balance(accounts.bob, Some(1000));
@@ -75,22 +77,22 @@ fn create_auction_test() {
     let expected_auctions = vec![
         AuctionInfo {
             id: 0,
-            creator: caller,
+            owner: caller,
             description: "auction 1".to_string(),
-            minimal_bid: 5,
-            actual_bid: 0,
-            actual_winner: caller,
+            starting_bid: 5,
+            highest_bid: 0,
+            highest_bidder: caller,
             creation_date: 0,
             finish_date: 5,
             auction_state: AuctionState::InProgress,
         },
         AuctionInfo {
             id: 1,
-            creator: caller,
+            owner: caller,
             description: "auction 2".to_string(),
-            minimal_bid: 15,
-            actual_bid: 0,
-            actual_winner: caller,
+            starting_bid: 15,
+            highest_bid: 0,
+            highest_bidder: caller,
             creation_date: 0,
             finish_date: 3,
             auction_state: AuctionState::InProgress,
@@ -102,8 +104,9 @@ fn create_auction_test() {
 #[ink::test]
 fn auction_creation_fee_test() {
     let auction_creation_fee = 10;
-    let mut contract = Alleblock::new(auction_creation_fee, 20);
     let accounts = ink_env::test::default_accounts::<DefaultEnvironment>();
+    set_caller_and_update_balance(accounts.django, Some(0));
+    let mut contract = Alleblock::new(auction_creation_fee, 20, accounts.django);
 
     set_caller_and_update_balance(accounts.bob, Some(1000));
 
@@ -118,11 +121,12 @@ fn auction_creation_fee_test() {
         contract.create_auction(5, "auction 1".to_string(), 3),
         Ok(0),
     );
+    assert_account_balance_equals(accounts.django, auction_creation_fee);
 }
 
 #[ink::test]
 fn bid_state_errors_test() {
-    let mut contract = Alleblock::new(10, 20);
+    let mut contract = Alleblock::new(10, 20, ink_env::account_id::<DefaultEnvironment>());
     let accounts = ink_env::test::default_accounts::<DefaultEnvironment>();
 
     set_caller_and_update_balance(accounts.bob, Some(1000));
@@ -168,7 +172,7 @@ fn bid_state_errors_test() {
 
     assert_eq!(
         accounts.eve,
-        contract.get_auctions()[normal_id as usize].actual_winner
+        contract.get_auctions()[normal_id as usize].highest_bidder
     );
     assert_eq!(
         AuctionState::InProgress,
@@ -179,8 +183,9 @@ fn bid_state_errors_test() {
 #[ink::test]
 fn bid_test() {
     let minimum_bid = 5;
-    let mut contract = Alleblock::new(10, 20);
     let accounts = ink_env::test::default_accounts::<DefaultEnvironment>();
+    set_caller_and_update_balance(accounts.django, Some(0));
+    let mut contract = Alleblock::new(10, 20, accounts.django);
 
     set_caller_and_update_balance(accounts.bob, Some(1000));
     set_value_transferred(10);
@@ -193,36 +198,36 @@ fn bid_test() {
 
     set_value_transferred(minimum_bid - 1);
     assert_call_result_eq(contract.bid(0), Err(Error::TooLowBidError));
-    assert_eq!(accounts.bob, contract.get_auctions()[0].actual_winner);
-    assert_eq!(0, contract.get_auctions()[0].actual_bid);
+    assert_eq!(accounts.bob, contract.get_auctions()[0].highest_bidder);
+    assert_eq!(0, contract.get_auctions()[0].highest_bid);
 
     set_value_transferred(minimum_bid);
     assert_call_result_eq(contract.bid(0), Ok(()));
-    assert_eq!(accounts.eve, contract.get_auctions()[0].actual_winner);
-    assert_eq!(minimum_bid, contract.get_auctions()[0].actual_bid);
+    assert_eq!(accounts.eve, contract.get_auctions()[0].highest_bidder);
+    assert_eq!(minimum_bid, contract.get_auctions()[0].highest_bid);
 
     let eve_best_bid = 500;
     set_value_transferred(eve_best_bid);
     assert_call_result_eq(contract.bid(0), Ok(()));
-    assert_eq!(eve_best_bid, contract.get_auctions()[0].actual_bid);
+    assert_eq!(eve_best_bid, contract.get_auctions()[0].highest_bid);
 
     set_caller_and_update_balance(accounts.charlie, Some(1500));
 
     set_value_transferred(eve_best_bid);
     assert_call_result_eq(contract.bid(0), Err(Error::TooLowBidError));
-    assert_eq!(accounts.eve, contract.get_auctions()[0].actual_winner);
-    assert_eq!(eve_best_bid, contract.get_auctions()[0].actual_bid);
+    assert_eq!(accounts.eve, contract.get_auctions()[0].highest_bidder);
+    assert_eq!(eve_best_bid, contract.get_auctions()[0].highest_bid);
 
     set_value_transferred(eve_best_bid + 1);
     assert_call_result_eq(contract.bid(0), Ok(()));
-    assert_eq!(accounts.charlie, contract.get_auctions()[0].actual_winner);
-    assert_eq!(eve_best_bid + 1, contract.get_auctions()[0].actual_bid);
+    assert_eq!(accounts.charlie, contract.get_auctions()[0].highest_bidder);
+    assert_eq!(eve_best_bid + 1, contract.get_auctions()[0].highest_bid);
     assert_account_balance_equals(accounts.eve, 1000);
 }
 
 #[ink::test]
 fn finalize_state_errors_test() {
-    let mut contract = Alleblock::new(10, 20);
+    let mut contract = Alleblock::new(10, 20, ink_env::account_id::<DefaultEnvironment>());
     let accounts = ink_env::test::default_accounts::<DefaultEnvironment>();
 
     set_caller_and_update_balance(accounts.bob, Some(1000));
@@ -272,18 +277,20 @@ fn finalize_state_errors_test() {
 
     assert_eq!(
         AuctionState::Finished,
-        contract.get_auctions()[2].auction_state
+        contract.get_auctions()[after_deadline_id as usize].auction_state
     );
 }
 
 #[ink::test]
 fn finish_behaviour_test() {
     let finalize_fee = 20;
-    let mut contract = Alleblock::new(10, finalize_fee);
     let accounts = ink_env::test::default_accounts::<DefaultEnvironment>();
+    let creation_cost = 10;
+    set_caller_and_update_balance(accounts.django, Some(0));
+    let mut contract = Alleblock::new(creation_cost, finalize_fee, accounts.django);
 
-    set_caller_and_update_balance(accounts.bob, Some(1010));
-    set_value_transferred(10);
+    set_caller_and_update_balance(accounts.bob, Some(1000 + creation_cost));
+    set_value_transferred(creation_cost);
     assert_call_result_eq(
         contract.create_auction(5, "auction 1".to_string(), 3),
         Ok(0),
@@ -304,11 +311,15 @@ fn finish_behaviour_test() {
         accounts.bob,
         bob_balance_after_contract_creation + eve_bid - eve_bid / (finalize_fee as u128),
     );
+    assert_account_balance_equals(
+        accounts.django,
+        creation_cost + eve_bid / (finalize_fee as u128),
+    );
 }
 
 #[ink::test]
 fn cancel_state_errors_test() {
-    let mut contract = Alleblock::new(10, 20);
+    let mut contract = Alleblock::new(10, 20, ink_env::account_id::<DefaultEnvironment>());
     let accounts = ink_env::test::default_accounts::<DefaultEnvironment>();
 
     set_caller_and_update_balance(accounts.bob, Some(1000));
@@ -334,11 +345,11 @@ fn cancel_state_errors_test() {
     set_caller_and_update_balance(accounts.eve, Some(1000));
     assert_call_result_eq(
         contract.cancel_auction(before_deadline_id),
-        Err(Error::NotACreatorError),
+        Err(Error::NotAnOwnerError),
     );
     assert_call_result_eq(
         contract.cancel_auction(after_deadline_id),
-        Err(Error::NotACreatorError),
+        Err(Error::NotAnOwnerError),
     );
 
     set_caller_and_update_balance(accounts.bob, None);
@@ -347,29 +358,26 @@ fn cancel_state_errors_test() {
         contract.cancel_auction(finished_id),
         Err(Error::AuctionNotInProgressError),
     );
-    assert_call_result_eq(contract.cancel_auction(after_deadline_id), Ok(()));
     assert_call_result_eq(
         contract.cancel_auction(after_deadline_id),
-        Err(Error::AuctionNotInProgressError),
+        Err(Error::AfterFinishDateError),
     );
 
     assert_eq!(
         AuctionState::Cancelled,
-        contract.get_auctions()[0].auction_state
-    );
-    assert_eq!(
-        AuctionState::Cancelled,
-        contract.get_auctions()[2].auction_state
+        contract.get_auctions()[before_deadline_id as usize].auction_state
     );
 }
 
 #[ink::test]
 fn cancel_behaviour_test() {
-    let mut contract = Alleblock::new(10, 20);
     let accounts = ink_env::test::default_accounts::<DefaultEnvironment>();
+    set_caller_and_update_balance(accounts.django, Some(0));
+    let creation_cost = 10;
+    let mut contract = Alleblock::new(creation_cost, 20, accounts.django);
 
-    set_caller_and_update_balance(accounts.bob, Some(1010));
-    set_value_transferred(10);
+    set_caller_and_update_balance(accounts.bob, Some(1000 + creation_cost));
+    set_value_transferred(creation_cost);
     assert_call_result_eq(
         contract.create_auction(5, "auction 1".to_string(), 3),
         Ok(0),
@@ -379,9 +387,10 @@ fn cancel_behaviour_test() {
     set_value_transferred(500);
     assert_call_result_eq(contract.bid(0), Ok(()));
 
-    set_caller_and_update_balance(accounts.bob, None);
     let fee = 500 / 20;
+    assert_eq!(contract.get_finalize_fee_of(0), Ok(fee));
 
+    set_caller_and_update_balance(accounts.bob, None);
     set_value_transferred(fee - 1);
     assert_call_result_eq(contract.cancel_auction(0), Err(Error::TooLowFeeError));
     assert_eq!(
@@ -392,4 +401,5 @@ fn cancel_behaviour_test() {
     set_value_transferred(fee);
     assert_call_result_eq(contract.cancel_auction(0), Ok(()));
     assert_account_balance_equals(accounts.eve, 1000);
+    assert_account_balance_equals(accounts.django, creation_cost + fee);
 }
