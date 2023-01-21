@@ -1,6 +1,6 @@
 {
     "source": {
-        "hash": "0xc4bdd926dfc1a427e28b90adcd9eae41a8632a6b9f08232b6003353c4088209f",
+        "hash": "0x0823f28d3e55c14a944ddfe9ba0e687832b78827fa288587fc2a2a66487d2892",
         "language": "ink! 3.4.0",
         "compiler": "rustc 1.68.0-nightly"
     },
@@ -24,17 +24,26 @@
                         }
                     },
                     {
-                        "label": "_finalize_fee",
+                        "label": "_finalize_fee_interest",
                         "type": {
                             "displayName": [
                                 "u32"
                             ],
                             "type": 9
                         }
+                    },
+                    {
+                        "label": "contract_owner",
+                        "type": {
+                            "displayName": [
+                                "AccountId"
+                            ],
+                            "type": 3
+                        }
                     }
                 ],
                 "docs": [
-                    "constructor setting height of the fees",
+                    "constructor setting the fees",
                     "finalize_fee shouldn't be set to 0"
                 ],
                 "label": "new",
@@ -45,7 +54,7 @@
             "events": [],
             "messages": [{
                     "args": [{
-                            "label": "minimal_bid",
+                            "label": "starting_bid",
                             "type": {
                                 "displayName": [
                                     "u128"
@@ -74,7 +83,7 @@
                     ],
                     "docs": [
                         " message used to create a brand new auction",
-                        " minimal_bid -- lowest price at which the item can be sold (in the smallest chunk of currency, eg. picoTZERO)",
+                        " starting_bid -- lowest price at which the item can be sold (in the smallest chunk of currency, eg. picoTZERO)",
                         " description -- description of item or service",
                         " duration -- duration of auction in seconds, after creating the auction, everyone can bid for <duration> seconds"
                     ],
@@ -151,9 +160,9 @@
                     }],
                     "docs": [
                         " cancel an auction ",
-                        " only auction creator can call this message",
+                        " only auction owner can call this message",
                         " money is returned to the bidder",
-                        " creator has to pay the fee",
+                        " owner has to pay the fee",
                         " changes auction stated to Cancelled"
                     ],
                     "label": "cancel_auction",
@@ -186,7 +195,7 @@
                 {
                     "args": [],
                     "docs": [
-                        " return fee needed to crate an auction"
+                        " return the fee needed to crate an auction"
                     ],
                     "label": "get_create_auction_fee",
                     "mutates": false,
@@ -202,9 +211,9 @@
                 {
                     "args": [],
                     "docs": [
-                        " return fee taken from finalized auction"
+                        " return the fee interest taken from finalized auction"
                     ],
-                    "label": "get_finalize_fee",
+                    "label": "get_finalize_fee_interest",
                     "mutates": false,
                     "payable": false,
                     "returnType": {
@@ -213,7 +222,47 @@
                         ],
                         "type": 9
                     },
-                    "selector": "0x6bf48ca2"
+                    "selector": "0x0d8036ba"
+                },
+                {
+                    "args": [{
+                        "label": "auction_id",
+                        "type": {
+                            "displayName": [
+                                "u64"
+                            ],
+                            "type": 2
+                        }
+                    }],
+                    "docs": [
+                        " return the fee taken when finalizing particular auction"
+                    ],
+                    "label": "get_finalize_fee_of",
+                    "mutates": false,
+                    "payable": false,
+                    "returnType": {
+                        "displayName": [
+                            "Result"
+                        ],
+                        "type": 14
+                    },
+                    "selector": "0xbda7f6a9"
+                },
+                {
+                    "args": [],
+                    "docs": [
+                        " return owner of the contract who receives all the fees"
+                    ],
+                    "label": "get_contract_owner",
+                    "mutates": false,
+                    "payable": false,
+                    "returnType": {
+                        "displayName": [
+                            "AccountId"
+                        ],
+                        "type": 3
+                    },
+                    "selector": "0x0422c457"
                 }
             ]
         },
@@ -244,7 +293,16 @@
                                 "ty": 9
                             }
                         },
-                        "name": "finalize_fee"
+                        "name": "finalize_fee_interest"
+                    },
+                    {
+                        "layout": {
+                            "cell": {
+                                "key": "0x0300000000000000000000000000000000000000000000000000000000000000",
+                                "ty": 3
+                            }
+                        },
+                        "name": "contract_owner"
                     }
                 ]
             }
@@ -270,7 +328,7 @@
                                     "typeName": "u64"
                                 },
                                 {
-                                    "name": "creator",
+                                    "name": "owner",
                                     "type": 3,
                                     "typeName": "AccountId"
                                 },
@@ -280,17 +338,17 @@
                                     "typeName": "String"
                                 },
                                 {
-                                    "name": "minimal_bid",
+                                    "name": "starting_bid",
                                     "type": 7,
                                     "typeName": "u128"
                                 },
                                 {
-                                    "name": "actual_bid",
+                                    "name": "highest_bid",
                                     "type": 7,
                                     "typeName": "u128"
                                 },
                                 {
-                                    "name": "actual_winner",
+                                    "name": "highest_bidder",
                                     "type": 3,
                                     "typeName": "AccountId"
                                 },
@@ -482,7 +540,7 @@
                                 },
                                 {
                                     "index": 6,
-                                    "name": "NotACreatorError"
+                                    "name": "NotAnOwnerError"
                                 },
                                 {
                                     "index": 7,
@@ -540,6 +598,42 @@
                     "def": {
                         "tuple": []
                     }
+                }
+            },
+            {
+                "id": 14,
+                "type": {
+                    "def": {
+                        "variant": {
+                            "variants": [{
+                                    "fields": [{
+                                        "type": 7
+                                    }],
+                                    "index": 0,
+                                    "name": "Ok"
+                                },
+                                {
+                                    "fields": [{
+                                        "type": 11
+                                    }],
+                                    "index": 1,
+                                    "name": "Err"
+                                }
+                            ]
+                        }
+                    },
+                    "params": [{
+                            "name": "T",
+                            "type": 7
+                        },
+                        {
+                            "name": "E",
+                            "type": 11
+                        }
+                    ],
+                    "path": [
+                        "Result"
+                    ]
                 }
             }
         ]

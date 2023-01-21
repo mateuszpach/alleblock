@@ -20,18 +20,23 @@
     <a href="./start_auction.html">Start auction</a>
     <a href="./owned_auctions.html">Owned auctions</a>
 
-    <form action="javascript:void(0);" onsubmit="setAccount()">
+    <form action="javascript:void(0);" onsubmit="create()">
         <br><br>
-        <label for="address">Address:</label>
-        <input type="text" id="address" name="address"><br><br>
-        <label for="key">Private key:</label>
-        <input type="text" id="key" name="key"><br><br>
-        <input type="submit" value="Save">
+        <label for="description">Description:</label>
+        <input type="text" id="description" name="description"><br><br>
+
+        <label for="startingBid">Starting bid:</label>
+        <input type="text" id="startingBid" name="startingBid"><br><br>
+
+        <label for="duration">Duration (ms):</label>
+        <input type="text" id="duration" name="duration"><br><br>
+
+        <label for="gasLimit">Gas limit:</label>
+        <input type="text" id="gasLimit" name="gasLimit"><br><br>
+
+        <input type="submit" value="Create">
     </form>
 
-    <script type="text/javascript">
-        window.onload = showSavedAccount();
-    </script>
 </body>
 
 </html>
