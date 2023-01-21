@@ -54,6 +54,10 @@ mod alleblock {
         /// fraction of the final price that contract takes as fee
         /// the contract will take <actual_bid>/<finalize_fee> currency
         finalize_fee: u32,
+
+        /// account of the owner of this contract
+        /// this account receives fees gathered by this contract
+        contract_owner: AccountId,
     }
 
     /// result type
@@ -63,12 +67,13 @@ mod alleblock {
         /// constructor setting height of the fees
         /// finalize_fee shouldn't be set to 0
         #[ink(constructor)]
-        pub fn new(create_auction_fee: u128, _finalize_fee: u32) -> Self {
+        pub fn new(create_auction_fee: u128, _finalize_fee: u32, contract_owner: AccountId) -> Self {
             let finalize_fee = if _finalize_fee == 0 {1} else {_finalize_fee};
             Self { 
                 auctions: Vec::new(),
                 create_auction_fee,
-                finalize_fee
+                finalize_fee,
+                contract_owner,
             }
         }
 
@@ -78,10 +83,19 @@ mod alleblock {
         /// duration -- duration of auction in seconds, after creating the auction, everyone can bid for <duration> seconds
         #[ink(message, payable)]
         pub fn create_auction(&mut self, minimal_bid: u128, description: String, duration: u64) -> Result<u64> {
-            if self.create_auction_fee > self.env().transferred_value() {
+            let transferred_value = self.env().transferred_value();
+
+            // check if paid fee is high enough
+            if self.create_auction_fee > transferred_value {
                 return Err(Error::TooLowFeeError);
             }
 
+            // transfer fee to the contract owner
+            if self.env().transfer(self.contract_owner, transferred_value).is_err() {
+                return Err(Error::TransferError);
+            }
+
+            // create new auction
             let creation_date = self.env().block_timestamp();
             let finish_date = creation_date + duration;
             let auction_id = self.auctions.len() as u64;
@@ -172,10 +186,17 @@ mod alleblock {
                 return Err(Error::BeforeFinishDateError);
             }
 
-            // transfer money to the auction creator
+            // if anyone bid the auction
             if auction.actual_bid > 0 {
                 let service_fee = auction.actual_bid.div_euclid(self.finalize_fee as u128);
+
+                // transfer money to the auction creator
                 if self.env().transfer(auction.creator, auction.actual_bid - service_fee).is_err() {
+                    return Err(Error::TransferError);
+                }
+
+                // transfer fee to the contract owner
+                if self.env().transfer(self.contract_owner, service_fee).is_err() {
                     return Err(Error::TransferError);
                 }
             }
@@ -229,6 +250,11 @@ mod alleblock {
                 }
             }
 
+            // transfer fee to the owner
+            if self.env().transfer(self.contract_owner, transferred_value).is_err() {
+                return Err(Error::TransferError);
+            }
+
             // update auction data
             let auction_mut = match self.auctions.get_mut(auction_id as usize) {
                 Some(x) => x,
@@ -255,6 +281,12 @@ mod alleblock {
         #[ink(message)]
         pub fn get_finalize_fee(&self) -> u32 {
             return self.finalize_fee.clone();
+        }
+
+        /// return owner of the contract who receives all the fees
+        #[ink(message)]
+        pub fn get_contract_owner(&self) -> AccountId {
+            return self.contract_owner.clone();
         }
     }
 
