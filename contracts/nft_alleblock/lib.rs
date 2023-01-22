@@ -12,6 +12,7 @@ mod nft_alleblock {
     use ink_env::call::{build_call, Call, ExecutionInput, Selector};
     use openbrush::contracts::traits::psp34::Id;
     use openbrush::contracts::psp34::PSP34Error;
+    use openbrush::contracts::traits::psp34::PSP34Ref;
 
     #[derive(PackedLayout,SpreadLayout, Debug, PartialEq, Eq, scale::Encode, scale::Decode, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -68,6 +69,9 @@ mod nft_alleblock {
         /// account of the owner of this contract
         /// this account receives fees gathered by this contract
         contract_owner: AccountId,
+
+        /// address of friendly nft storage
+        nft_storage: AccountId,
     }
 
     /// result type
@@ -76,14 +80,16 @@ mod nft_alleblock {
     impl NftAlleblock {
         /// constructor setting the fees
         /// finalize_fee shouldn't be set to 0
+        /// also need to give address of friendly nft storage, whose owner this contract will be
         #[ink(constructor)]
-        pub fn new(create_auction_fee: u128, _finalize_fee_interest: u32, contract_owner: AccountId) -> Self {
+        pub fn new(create_auction_fee: u128, _finalize_fee_interest: u32, contract_owner: AccountId, nft_storage: AccountId) -> Self {
             let finalize_fee_interest = if _finalize_fee_interest == 0 {1} else {_finalize_fee_interest};
             Self { 
                 auctions: Vec::new(),
                 create_auction_fee,
                 finalize_fee_interest,
                 contract_owner,
+                nft_storage,
             }
         }
 
@@ -95,7 +101,8 @@ mod nft_alleblock {
         /// token_id -- id of the token to be auctioned (None if not selling nft)
         /// Note: if you want to create auction with nft, you first need to allow auction contract to transfer it
         #[ink(message, payable)]
-        pub fn create_auction(&mut self, 
+        pub fn create_auction(
+            &mut self, 
             starting_bid: u128,
             description: String,
             duration: u64, 
@@ -126,12 +133,12 @@ mod nft_alleblock {
                 let unwrapped_token = nft_token_id.clone().unwrap();
 
                 // check if contract has allowance to take the token
-                if !self.have_allowance(owner, unwrapped_account.clone(), unwrapped_token.clone()) {
+                if !PSP34Ref::allowance(&unwrapped_account.clone(), owner, self.env().account_id(), nft_token_id.clone()) {
                     return Err(Error::NoNftAllowanceError);
                 }
 
                 // freeze the nft in the contract account
-                if self.transfer_token(self.env().account_id(), unwrapped_account.clone(), unwrapped_token.clone()).is_err() {
+                if PSP34Ref::transfer(&unwrapped_account.clone(), self.nft_storage, unwrapped_token.clone(), [0x0].to_vec()).is_err() {
                     return Err(Error::NftTransferError);
                 }
             }
@@ -252,7 +259,7 @@ mod nft_alleblock {
 
             // send nft to the winner
             if auction.nft_contract_account.is_some() {
-                if self.transfer_token(auction.highest_bidder, auction.nft_contract_account.clone().unwrap(), auction.nft_token_id.clone().unwrap()).is_err() {
+                if self.transfer_token_by_storage(auction.highest_bidder, auction.nft_contract_account.clone().unwrap(), auction.nft_token_id.clone().unwrap()).is_err() {
                     return Err(Error::NftTransferError);
                 }
             }
@@ -314,7 +321,7 @@ mod nft_alleblock {
 
             // return nft to the auction owner
             if auction.nft_contract_account.is_some() {
-                if self.transfer_token(auction.owner, auction.nft_contract_account.clone().unwrap(), auction.nft_token_id.clone().unwrap()).is_err() {
+                if self.transfer_token_by_storage(auction.owner, auction.nft_contract_account.clone().unwrap(), auction.nft_token_id.clone().unwrap()).is_err() {
                     return Err(Error::NftTransferError);
                 }
             }
@@ -368,34 +375,19 @@ mod nft_alleblock {
             return self.contract_owner.clone();
         }
 
-        /// check if you are allowed to take this psp34 token
-        /// call allowance(owner: AccountId, operator: AccountId, id: Option) ➔ bool
-        /// selector: 0x4790f55a
-        fn have_allowance(&self, owner: AccountId, nft_contract: AccountId, token_id: Id) -> bool {
-            return build_call::<DefaultEnvironment>()
-                .call_type(Call::new().callee(nft_contract))
-                .exec_input(
-                    ExecutionInput::new(Selector::new([0x47, 0x90, 0xf5, 0x5a]))
-                    .push_arg(owner)
-                    .push_arg(self.env().caller())
-                    .push_arg(token_id)
-                )
-                .returns::<bool>()
-                .fire()
-                .unwrap()     
-        }
 
-        /// transfer nft to indicated address
-        /// call transfer(to: AccountId, id: Id, data: [u8]) ➔ Result<(), PSP34Error>
-        /// selector: 0x3128d61b
-        fn transfer_token(&mut self, to: AccountId, nft_contract: AccountId, token_id: Id) -> core::result::Result<(), PSP34Error> {
+        /// transfer nft to indicated address by nft storage
+        /// call ransfer(&mut self, to: AccountId, nft_account: AccountId, nft_token: Id) -> core::result::Result<(), PSP34Error>
+        /// selector: 0x84a15da1
+        fn transfer_token_by_storage(&mut self, to: AccountId, nft_contract: AccountId, token_id: Id) -> core::result::Result<(), PSP34Error> {
             return build_call::<DefaultEnvironment>()
-                .call_type(Call::new().callee(nft_contract))
+                .call_type(Call::new().callee(self.nft_storage))
                 .exec_input(
-                    ExecutionInput::new(Selector::new([0x31, 0x28, 0xd6, 0x1b]))
+                    ExecutionInput::new(Selector::new([0x84, 0xa1, 0x5d, 0xa1]))
                     .push_arg(to)
+                    .push_arg(nft_contract)
                     .push_arg(token_id)
-                    .push_arg(0x0)
+                    .push_arg([0x0].to_vec())
                 )
                 .returns::<core::result::Result<(), PSP34Error>>()
                 .fire()

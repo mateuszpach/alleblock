@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0x6d4b1dbcc26b9a56599a4fcf6f0f3b69e0e202c75c5aac1781e2cbf069189c1b",
+    "hash": "0x7272ba929ca30f99a33547657a3f9b1296dbae1489089586f6dccc5aae09548b",
     "language": "ink! 3.3.1",
     "compiler": "rustc 1.68.0-nightly"
   },
@@ -42,11 +42,21 @@
                 ],
                 "type": 3
               }
+            },
+            {
+              "label": "nft_storage",
+              "type": {
+                "displayName": [
+                  "AccountId"
+                ],
+                "type": 3
+              }
             }
           ],
           "docs": [
             "constructor setting the fees",
-            "finalize_fee shouldn't be set to 0"
+            "finalize_fee shouldn't be set to 0",
+            "also need to give address of friendly nft storage, whose owner this contract will be"
           ],
           "label": "new",
           "payable": false,
@@ -110,7 +120,8 @@
             " description -- description of item or service",
             " duration -- duration of auction in seconds, after creating the auction, everyone can bid for <duration> seconds",
             " nft_contract -- account of the origin contract of the nft to be auctioned (None if not selling nft)",
-            " token_id -- id of the token to be auctioned (None if not selling nft)"
+            " token_id -- id of the token to be auctioned (None if not selling nft)",
+            " Note: if you want to create auction with nft, you first need to allow auction contract to transfer it"
           ],
           "label": "create_auction",
           "mutates": true,
@@ -337,6 +348,15 @@
               }
             },
             "name": "contract_owner"
+          },
+          {
+            "layout": {
+              "cell": {
+                "key": "0x0400000000000000000000000000000000000000000000000000000000000000",
+                "ty": 3
+              }
+            },
+            "name": "nft_storage"
           }
         ]
       }
