@@ -20,6 +20,8 @@
     <a href="./start_auction.html">Start auction</a>
     <a href="./owned_auctions.html">Owned auctions</a>
 
+
+    <h3>Standard auction</h3>
     <form action="javascript:void(0);" onsubmit="create()">
         <br><br>
         <label for="description">Description:</label>
@@ -36,7 +38,31 @@
 
         <input type="submit" value="Create">
     </form>
+    <hr>
+    <h3>NFT auction</h3>
+    <p style="color: red"> NOTE: It is your responsibility to approve Alleblock contract () to transfer your token before creating an auction.</p>
+    <form action="javascript:void(0);" onsubmit="create()">
+        <br><br>
+        <label for="description">Description:</label>
+        <input type="text" id="description" name="description"><br><br>
 
+        <label for="startingBid">Starting bid:</label>
+        <input type="text" id="startingBid" name="startingBid"><br><br>
+
+        <label for="duration">Duration (ms):</label>
+        <input type="text" id="duration" name="duration"><br><br>
+
+        <label for="gasLimit">Gas limit:</label>
+        <input type="text" id="gasLimit" name="gasLimit"><br><br>
+
+        <label for="nftContract">NFT contract:</label>
+        <input type="text" id="nftContract" name="nftContract"><br><br>
+
+        <label for="nftId">NFT id:</label>
+        <input type="text" id="nftId" name="nftId"><br><br>
+
+        <input type="submit" value="Create">
+    </form>
 </body>
 
 </html>
