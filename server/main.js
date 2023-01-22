@@ -62,6 +62,20 @@ async function createAuction(res, privateKey, startingBid, description, duration
         });
 };
 
+async function createNftAuction(res, privateKey, startingBid, description, duration, gasLimit, nftContract, nftId) {
+    const owner = keyring.createFromUri(privateKey);
+
+    const { output } = await contract.query.getCreateAuctionFee(0, {});
+    const createAuctionFee = output;
+
+    return contract.tx.createAuction({ value: createAuctionFee, gasLimit: gasLimit }, startingBid, description, duration, nftContract, nftId)
+        .signAndSend(owner, result => {
+            if (result.status.isFinalized) {
+                sendRes(res, result);
+            }
+        });
+};
+
 async function bid(res, privateKey, auctionId, bidPrice, gasLimit) {
     const owner = keyring.createFromUri(privateKey);
 
@@ -117,6 +131,21 @@ app.post('/createauction', async(req, res) => {
         req.query.description,
         req.query.duration,
         req.query.gasLimit
+    ).catch((e) => {
+        res.status(400).send(e.toString());
+    });
+});
+
+app.post('/createnftauction', async(req, res) => {
+    await createNftAuction(
+        res,
+        req.query.privateKey,
+        req.query.startingBid,
+        req.query.description,
+        req.query.duration,
+        req.query.gasLimit,
+        res.query.nftContract,
+        res.query.nftId
     ).catch((e) => {
         res.status(400).send(e.toString());
     });

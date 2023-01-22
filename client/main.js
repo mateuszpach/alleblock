@@ -348,3 +348,38 @@ function create() {
             alert('Action failed.\n\n' + err);
         });
 }
+
+function createNft() {
+    const startingBid = document.querySelector('input[name=startingBid]').value;
+    const description = document.querySelector('input[name=description]').value;
+    const duration = document.querySelector('input[name=duration]').value;
+    const gasLimit = document.querySelector('input[name=gasLimit]').value;
+    const nftContract = document.querySelector('input[name=nftContract]').value;
+    const nftId = document.querySelector('input[name=nftId]').value;
+
+    fetch(api + 'createnftauction?' + new URLSearchParams({
+            privateKey: getCookie('key'),
+            startingBid: startingBid,
+            description: description,
+            duration: duration,
+            gasLimit: gasLimit,
+            nftContract: nftContract,
+            nftId: nftId
+        }).toString(), {
+            method: 'POST'
+        })
+        .then(res => {
+            if (!res.ok) {
+                return res.text().then(text => { throw new Error(text) });
+            } else {
+                return res.json();
+            }
+        })
+        .then(data => {
+            alert('Action successful.\n\n' + JSON.stringify(data));
+            window.location = './owned_auctions.html';
+        })
+        .catch(err => {
+            alert('Action failed.\n\n' + err);
+        });
+}
