@@ -350,10 +350,10 @@ function create() {
 }
 
 function createNft() {
-    const startingBid = document.querySelector('input[name=startingBid]').value;
-    const description = document.querySelector('input[name=description]').value;
-    const duration = document.querySelector('input[name=duration]').value;
-    const gasLimit = document.querySelector('input[name=gasLimit]').value;
+    const startingBid = document.querySelector('input[name=nstartingBid]').value;
+    const description = document.querySelector('input[name=ndescription]').value;
+    const duration = document.querySelector('input[name=nduration]').value;
+    const gasLimit = document.querySelector('input[name=ngasLimit]').value;
     const nftContract = document.querySelector('input[name=nftContract]').value;
     const nftId = document.querySelector('input[name=nftId]').value;
 

@@ -16,7 +16,7 @@ fs.readFile('./metadata.json', (err, data) => {
 const port = 8080;
 const provider = new WsProvider('wss://ws-smartnet.test.azero.dev');
 const keyring = new Keyring({ type: 'sr25519' });
-const contractAddr = '5DbGKPyM3QXaRGhdb3JycuUZ2U3jL5ucwX8NnX21GwCWorxs';
+const contractAddr = '5GeDRM9yAHJxYgfs9WLfvy2G1N2LPYZVqwhmDYJ6b6noUWVr';
 
 app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Origin", "*");
@@ -54,7 +54,7 @@ async function createAuction(res, privateKey, startingBid, description, duration
     const { output } = await contract.query.getCreateAuctionFee(0, {});
     const createAuctionFee = output;
 
-    return contract.tx.createAuction({ value: createAuctionFee, gasLimit: gasLimit }, startingBid, description, duration)
+    return contract.tx.createAuction({ value: createAuctionFee, gasLimit: gasLimit }, startingBid, description, duration, null, null)
         .signAndSend(owner, result => {
             if (result.status.isFinalized) {
                 sendRes(res, result);
@@ -68,7 +68,9 @@ async function createNftAuction(res, privateKey, startingBid, description, durat
     const { output } = await contract.query.getCreateAuctionFee(0, {});
     const createAuctionFee = output;
 
-    return contract.tx.createAuction({ value: createAuctionFee, gasLimit: gasLimit }, startingBid, description, duration, nftContract, nftId)
+    return contract.tx.createAuction({ value: createAuctionFee, gasLimit: gasLimit }, startingBid, description, duration, nftContract, {
+            u8: nftId
+        })
         .signAndSend(owner, result => {
             if (result.status.isFinalized) {
                 sendRes(res, result);
@@ -144,8 +146,8 @@ app.post('/createnftauction', async(req, res) => {
         req.query.description,
         req.query.duration,
         req.query.gasLimit,
-        res.query.nftContract,
-        res.query.nftId
+        req.query.nftContract,
+        req.query.nftId
     ).catch((e) => {
         res.status(400).send(e.toString());
     });
@@ -210,3 +212,4 @@ app.get('/lasttimestamp', async(req, res) => {
 // http://127.0.0.1:8080/cancelauction?privateKey=0x12d797ce064de04a047241cfcbde08033482a74be3a076fb1c32ffb33f01373c&auctionId=<INSERT ID>&gasLimit=10000000000
 // http://127.0.0.1:8080/getauctionson?privateKey=0x12d797ce064de04a047241cfcbde08033482a74be3a076fb1c32ffb33f01373c&auctionId=<INSERT ID>&gasLimit=10000000000
 // http://127.0.0.1:8080/getauctions
+// 5GTcFeiWRcEFSZ3YHZfjfmF3UTkdsujqNCQ87WSDyULD5d2o
