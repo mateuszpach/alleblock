@@ -3,9 +3,16 @@
 use ink_lang as ink;
 
 #[ink::contract]
-mod alleblock {
+mod nft_alleblock {
     use ink_prelude::{string::String, vec::Vec};
     use ink_storage::traits::{PackedLayout, SpreadLayout};
+
+    // needed to call psp34 contracts
+    use ink_env::DefaultEnvironment;
+    use ink_env::call::{build_call, Call, ExecutionInput, Selector};
+    use openbrush::contracts::traits::psp34::Id;
+    use openbrush::contracts::psp34::PSP34Error;
+    use openbrush::contracts::traits::psp34::PSP34Ref;
 
     #[derive(PackedLayout,SpreadLayout, Debug, PartialEq, Eq, scale::Encode, scale::Decode, Clone)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
@@ -25,7 +32,9 @@ mod alleblock {
         AuctionNotInProgressError,
         NoSuchAuctionError,
         NotAnOwnerError,
-        TransferError
+        TransferError,
+        NoNftAllowanceError,
+        NftTransferError,
     }
 
     #[derive(PackedLayout, PartialEq, SpreadLayout, scale::Encode, scale::Decode, Clone, Debug)]
@@ -39,12 +48,14 @@ mod alleblock {
         pub highest_bidder: AccountId,
         pub creation_date: Timestamp,
         pub finish_date: Timestamp,
-        pub auction_state: AuctionState
+        pub auction_state: AuctionState,
+        pub nft_contract_account: Option<AccountId>,
+        pub nft_token_id: Option<Id>,
     }
     
 
     #[ink(storage)]
-    pub struct Alleblock {
+    pub struct NftAlleblock {
         /// list of all contract's auctions
         auctions: Vec<AuctionInfo>,
 
@@ -58,22 +69,27 @@ mod alleblock {
         /// account of the owner of this contract
         /// this account receives fees gathered by this contract
         contract_owner: AccountId,
+
+        /// address of friendly nft storage
+        nft_storage: AccountId,
     }
 
     /// result type
     pub type Result<T> = core::result::Result<T, Error>;
 
-    impl Alleblock {
+    impl NftAlleblock {
         /// constructor setting the fees
         /// finalize_fee shouldn't be set to 0
+        /// also need to give address of friendly nft storage, whose owner this contract will be
         #[ink(constructor)]
-        pub fn new(create_auction_fee: u128, _finalize_fee_interest: u32, contract_owner: AccountId) -> Self {
+        pub fn new(create_auction_fee: u128, _finalize_fee_interest: u32, contract_owner: AccountId, nft_storage: AccountId) -> Self {
             let finalize_fee_interest = if _finalize_fee_interest == 0 {1} else {_finalize_fee_interest};
             Self { 
                 auctions: Vec::new(),
                 create_auction_fee,
                 finalize_fee_interest,
                 contract_owner,
+                nft_storage,
             }
         }
 
@@ -81,9 +97,23 @@ mod alleblock {
         /// starting_bid -- lowest price at which the item can be sold (in the smallest chunk of currency, eg. picoTZERO)
         /// description -- description of item or service
         /// duration -- duration of auction in miliseconds, after creating the auction, everyone can bid for <duration> seconds
+        /// nft_contract -- account of the origin contract of the nft to be auctioned (None if not selling nft)
+        /// token_id -- id of the token to be auctioned (None if not selling nft)
+        /// Note: if you want to create auction with nft, you first need to allow auction contract to transfer it
         #[ink(message, payable)]
-        pub fn create_auction(&mut self, starting_bid: u128, description: String, duration: u64) -> Result<u64> {
+        pub fn create_auction(
+            &mut self, 
+            starting_bid: u128,
+            description: String,
+            duration: u64, 
+            nft_contract: Option<AccountId>,
+            token_id: Option<Id>
+        ) -> Result<u64> {
             let transferred_value = self.env().transferred_value();
+            let owner = self.env().caller();
+
+            let nft_contract_account: Option<AccountId>;
+            let nft_token_id: Option<Id>;
 
             // check if paid fee is high enough
             if self.create_auction_fee > transferred_value {
@@ -95,6 +125,30 @@ mod alleblock {
                 return Err(Error::TransferError);
             }
 
+            // if nft is auctioned
+            if nft_contract.is_some() && token_id.is_some() {
+                nft_contract_account = nft_contract;
+                nft_token_id = token_id;
+                let unwrapped_account = nft_contract_account.clone().unwrap();
+                let unwrapped_token = nft_token_id.clone().unwrap();
+
+                // check if contract has allowance to take the token
+                if !PSP34Ref::allowance(&unwrapped_account.clone(), owner, self.env().account_id(), nft_token_id.clone()) {
+                    return Err(Error::NoNftAllowanceError);
+                }
+
+                // freeze the nft in the contract account
+                if PSP34Ref::transfer(&unwrapped_account.clone(), self.nft_storage, unwrapped_token.clone(), [0x0].to_vec()).is_err() {
+                    return Err(Error::NftTransferError);
+                }
+            }
+
+            // if no nft is auctioned
+            else {
+                nft_contract_account = None;
+                nft_token_id = None;
+            }
+
             // create new auction
             let creation_date = self.env().block_timestamp();
             let finish_date = creation_date + duration;
@@ -102,14 +156,16 @@ mod alleblock {
 
             let fresh_auction = AuctionInfo {
                 id: auction_id,
-                owner: self.env().caller(),
+                owner,
                 description,
                 starting_bid,
                 highest_bid: 0,
-                highest_bidder: self.env().caller(),
+                highest_bidder: owner,
                 creation_date,
                 finish_date,
-                auction_state: AuctionState::InProgress
+                auction_state: AuctionState::InProgress,
+                nft_contract_account,
+                nft_token_id,
             };
 
             self.auctions.push(fresh_auction);
@@ -201,6 +257,13 @@ mod alleblock {
                 }
             }
 
+            // send nft to the winner
+            if auction.nft_contract_account.is_some() {
+                if self.transfer_token_by_storage(auction.highest_bidder, auction.nft_contract_account.clone().unwrap(), auction.nft_token_id.clone().unwrap()).is_err() {
+                    return Err(Error::NftTransferError);
+                }
+            }
+
             // update auction data
             let auction_mut = match self.auctions.get_mut(auction_id as usize) {
                 Some(x) => x,
@@ -256,7 +319,14 @@ mod alleblock {
                 }
             }
 
-            // transfer fee to the owner
+            // return nft to the auction owner
+            if auction.nft_contract_account.is_some() {
+                if self.transfer_token_by_storage(auction.owner, auction.nft_contract_account.clone().unwrap(), auction.nft_token_id.clone().unwrap()).is_err() {
+                    return Err(Error::NftTransferError);
+                }
+            }
+
+            // transfer fee to the contract owner
             if self.env().transfer(self.contract_owner, transferred_value).is_err() {
                 return Err(Error::TransferError);
             }
@@ -304,9 +374,31 @@ mod alleblock {
         pub fn get_contract_owner(&self) -> AccountId {
             return self.contract_owner.clone();
         }
+
+        /// get account of its nft storage
+        #[ink(message)]
+        pub fn get_nft_storage(&self) -> AccountId {
+            return self.nft_storage.clone();
+        }
+
+
+        /// transfer nft to indicated address by nft storage
+        /// call ransfer(&mut self, to: AccountId, nft_account: AccountId, nft_token: Id) -> core::result::Result<(), PSP34Error>
+        /// selector: 0x84a15da1
+        fn transfer_token_by_storage(&mut self, to: AccountId, nft_contract: AccountId, token_id: Id) -> core::result::Result<(), PSP34Error> {
+            return build_call::<DefaultEnvironment>()
+                .call_type(Call::new().callee(self.nft_storage))
+                .exec_input(
+                    ExecutionInput::new(Selector::new([0x84, 0xa1, 0x5d, 0xa1]))
+                    .push_arg(to)
+                    .push_arg(nft_contract)
+                    .push_arg(token_id)
+                    .push_arg([0x0].to_vec())
+                )
+                .returns::<core::result::Result<(), PSP34Error>>()
+                .fire()
+                .unwrap()     
+        }
     }
 
 }
-
-#[cfg(test)]
-mod tests;

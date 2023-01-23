@@ -1,5 +1,5 @@
 [package]
-name = "alleblock"
+name = "nft_alleblock"
 version = "0.1.0"
 authors = ["KMP"]
 edition = "2021"
@@ -11,12 +11,15 @@ ink_env = { version = "3.3", default-features = false }
 ink_storage = { version = "3.3", default-features = false }
 ink_lang = { version = "3.3", default-features = false }
 ink_prelude = { version = "3.3", default-features = false }
+ink_engine = { version = "3.3", default-features = false, optional = true }
 
 scale = { package = "parity-scale-codec", version = "3", default-features = false, features = ["derive"] }
 scale-info = { version = "2", default-features = false, features = ["derive"], optional = true }
 
+openbrush = { version = "2.2.0", default-features = false, features = ["psp34"] }
+
 [lib]
-name = "alleblock"
+name = "nft_alleblock"
 path = "lib.rs"
 crate-type = [
 	# Used for normal contract Wasm blobs.
@@ -26,11 +29,15 @@ crate-type = [
 [features]
 default = ["std"]
 std = [
+    "ink_primitives/std",
+    "ink_metadata",
     "ink_metadata/std",
     "ink_env/std",
     "ink_storage/std",
-    "ink_primitives/std",
+    "ink_lang/std",
     "scale/std",
+    "scale-info",
     "scale-info/std",
+    "openbrush/std",
 ]
 ink-as-dependency = []

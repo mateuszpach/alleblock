@@ -1,0 +1,914 @@
+{
+  "source": {
+    "hash": "0xf084d0cab4facdf1caa1fbbfdce41693e45c1c1adeb2585e3c01c84de241ca08",
+    "language": "ink! 3.3.1",
+    "compiler": "rustc 1.68.0-nightly"
+  },
+  "contract": {
+    "name": "nft_alleblock",
+    "version": "0.1.0",
+    "authors": [
+      "KMP"
+    ]
+  },
+  "V3": {
+    "spec": {
+      "constructors": [
+        {
+          "args": [
+            {
+              "label": "create_auction_fee",
+              "type": {
+                "displayName": [
+                  "u128"
+                ],
+                "type": 7
+              }
+            },
+            {
+              "label": "_finalize_fee_interest",
+              "type": {
+                "displayName": [
+                  "u32"
+                ],
+                "type": 13
+              }
+            },
+            {
+              "label": "contract_owner",
+              "type": {
+                "displayName": [
+                  "AccountId"
+                ],
+                "type": 3
+              }
+            },
+            {
+              "label": "nft_storage",
+              "type": {
+                "displayName": [
+                  "AccountId"
+                ],
+                "type": 3
+              }
+            }
+          ],
+          "docs": [
+            "constructor setting the fees",
+            "finalize_fee shouldn't be set to 0",
+            "also need to give address of friendly nft storage, whose owner this contract will be"
+          ],
+          "label": "new",
+          "payable": false,
+          "selector": "0x9bae9d5e"
+        }
+      ],
+      "docs": [],
+      "events": [],
+      "messages": [
+        {
+          "args": [
+            {
+              "label": "starting_bid",
+              "type": {
+                "displayName": [
+                  "u128"
+                ],
+                "type": 7
+              }
+            },
+            {
+              "label": "description",
+              "type": {
+                "displayName": [
+                  "String"
+                ],
+                "type": 6
+              }
+            },
+            {
+              "label": "duration",
+              "type": {
+                "displayName": [
+                  "u64"
+                ],
+                "type": 2
+              }
+            },
+            {
+              "label": "nft_contract",
+              "type": {
+                "displayName": [
+                  "Option"
+                ],
+                "type": 9
+              }
+            },
+            {
+              "label": "token_id",
+              "type": {
+                "displayName": [
+                  "Option"
+                ],
+                "type": 10
+              }
+            }
+          ],
+          "docs": [
+            " message used to create a brand new auction",
+            " starting_bid -- lowest price at which the item can be sold (in the smallest chunk of currency, eg. picoTZERO)",
+            " description -- description of item or service",
+            " duration -- duration of auction in miliseconds, after creating the auction, everyone can bid for <duration> seconds",
+            " nft_contract -- account of the origin contract of the nft to be auctioned (None if not selling nft)",
+            " token_id -- id of the token to be auctioned (None if not selling nft)",
+            " Note: if you want to create auction with nft, you first need to allow auction contract to transfer it"
+          ],
+          "label": "create_auction",
+          "mutates": true,
+          "payable": true,
+          "returnType": {
+            "displayName": [
+              "Result"
+            ],
+            "type": 15
+          },
+          "selector": "0xd6cd59d7"
+        },
+        {
+          "args": [
+            {
+              "label": "auction_id",
+              "type": {
+                "displayName": [
+                  "u64"
+                ],
+                "type": 2
+              }
+            }
+          ],
+          "docs": [
+            " try to bid auction with given id"
+          ],
+          "label": "bid",
+          "mutates": true,
+          "payable": true,
+          "returnType": {
+            "displayName": [
+              "Result"
+            ],
+            "type": 17
+          },
+          "selector": "0x668d28a7"
+        },
+        {
+          "args": [
+            {
+              "label": "auction_id",
+              "type": {
+                "displayName": [
+                  "u64"
+                ],
+                "type": 2
+              }
+            }
+          ],
+          "docs": [
+            " finish an auction, so the owner gets the auction money",
+            " can be called only after the auction's finish date",
+            " changes the auction state to Finished"
+          ],
+          "label": "finish_auction",
+          "mutates": true,
+          "payable": false,
+          "returnType": {
+            "displayName": [
+              "Result"
+            ],
+            "type": 17
+          },
+          "selector": "0xa758a1b5"
+        },
+        {
+          "args": [
+            {
+              "label": "auction_id",
+              "type": {
+                "displayName": [
+                  "u64"
+                ],
+                "type": 2
+              }
+            }
+          ],
+          "docs": [
+            " cancel an auction ",
+            " only auction owner can call this message",
+            " money is returned to the bidder",
+            " owner has to pay the fee",
+            " changes auction stated to Cancelled"
+          ],
+          "label": "cancel_auction",
+          "mutates": true,
+          "payable": true,
+          "returnType": {
+            "displayName": [
+              "Result"
+            ],
+            "type": 17
+          },
+          "selector": "0x64e3bd76"
+        },
+        {
+          "args": [],
+          "docs": [
+            " return list of all the auctions"
+          ],
+          "label": "get_auctions",
+          "mutates": false,
+          "payable": false,
+          "returnType": {
+            "displayName": [
+              "Vec"
+            ],
+            "type": 0
+          },
+          "selector": "0xa67bd204"
+        },
+        {
+          "args": [],
+          "docs": [
+            " return the fee needed to crate an auction"
+          ],
+          "label": "get_create_auction_fee",
+          "mutates": false,
+          "payable": false,
+          "returnType": {
+            "displayName": [
+              "u128"
+            ],
+            "type": 7
+          },
+          "selector": "0x4a690616"
+        },
+        {
+          "args": [],
+          "docs": [
+            " return the fee interest taken from finalized auction"
+          ],
+          "label": "get_finalize_fee_interest",
+          "mutates": false,
+          "payable": false,
+          "returnType": {
+            "displayName": [
+              "u32"
+            ],
+            "type": 13
+          },
+          "selector": "0x0d8036ba"
+        },
+        {
+          "args": [
+            {
+              "label": "auction_id",
+              "type": {
+                "displayName": [
+                  "u64"
+                ],
+                "type": 2
+              }
+            }
+          ],
+          "docs": [
+            " return the fee taken when finalizing particular auction"
+          ],
+          "label": "get_finalize_fee_of",
+          "mutates": false,
+          "payable": false,
+          "returnType": {
+            "displayName": [
+              "Result"
+            ],
+            "type": 19
+          },
+          "selector": "0xbda7f6a9"
+        },
+        {
+          "args": [],
+          "docs": [
+            " return owner of the contract who receives all the fees"
+          ],
+          "label": "get_contract_owner",
+          "mutates": false,
+          "payable": false,
+          "returnType": {
+            "displayName": [
+              "AccountId"
+            ],
+            "type": 3
+          },
+          "selector": "0x0422c457"
+        },
+        {
+          "args": [],
+          "docs": [
+            " get account of its nft storage"
+          ],
+          "label": "get_nft_storage",
+          "mutates": false,
+          "payable": false,
+          "returnType": {
+            "displayName": [
+              "AccountId"
+            ],
+            "type": 3
+          },
+          "selector": "0x78f4d114"
+        }
+      ]
+    },
+    "storage": {
+      "struct": {
+        "fields": [
+          {
+            "layout": {
+              "cell": {
+                "key": "0x0000000000000000000000000000000000000000000000000000000000000000",
+                "ty": 0
+              }
+            },
+            "name": "auctions"
+          },
+          {
+            "layout": {
+              "cell": {
+                "key": "0x0100000000000000000000000000000000000000000000000000000000000000",
+                "ty": 7
+              }
+            },
+            "name": "create_auction_fee"
+          },
+          {
+            "layout": {
+              "cell": {
+                "key": "0x0200000000000000000000000000000000000000000000000000000000000000",
+                "ty": 13
+              }
+            },
+            "name": "finalize_fee_interest"
+          },
+          {
+            "layout": {
+              "cell": {
+                "key": "0x0300000000000000000000000000000000000000000000000000000000000000",
+                "ty": 3
+              }
+            },
+            "name": "contract_owner"
+          },
+          {
+            "layout": {
+              "cell": {
+                "key": "0x0400000000000000000000000000000000000000000000000000000000000000",
+                "ty": 3
+              }
+            },
+            "name": "nft_storage"
+          }
+        ]
+      }
+    },
+    "types": [
+      {
+        "id": 0,
+        "type": {
+          "def": {
+            "sequence": {
+              "type": 1
+            }
+          }
+        }
+      },
+      {
+        "id": 1,
+        "type": {
+          "def": {
+            "composite": {
+              "fields": [
+                {
+                  "name": "id",
+                  "type": 2,
+                  "typeName": "u64"
+                },
+                {
+                  "name": "owner",
+                  "type": 3,
+                  "typeName": "AccountId"
+                },
+                {
+                  "name": "description",
+                  "type": 6,
+                  "typeName": "String"
+                },
+                {
+                  "name": "starting_bid",
+                  "type": 7,
+                  "typeName": "u128"
+                },
+                {
+                  "name": "highest_bid",
+                  "type": 7,
+                  "typeName": "u128"
+                },
+                {
+                  "name": "highest_bidder",
+                  "type": 3,
+                  "typeName": "AccountId"
+                },
+                {
+                  "name": "creation_date",
+                  "type": 2,
+                  "typeName": "Timestamp"
+                },
+                {
+                  "name": "finish_date",
+                  "type": 2,
+                  "typeName": "Timestamp"
+                },
+                {
+                  "name": "auction_state",
+                  "type": 8,
+                  "typeName": "AuctionState"
+                },
+                {
+                  "name": "nft_contract_account",
+                  "type": 9,
+                  "typeName": "Option<AccountId>"
+                },
+                {
+                  "name": "nft_token_id",
+                  "type": 10,
+                  "typeName": "Option<Id>"
+                }
+              ]
+            }
+          },
+          "path": [
+            "nft_alleblock",
+            "nft_alleblock",
+            "AuctionInfo"
+          ]
+        }
+      },
+      {
+        "id": 2,
+        "type": {
+          "def": {
+            "primitive": "u64"
+          }
+        }
+      },
+      {
+        "id": 3,
+        "type": {
+          "def": {
+            "composite": {
+              "fields": [
+                {
+                  "type": 4,
+                  "typeName": "[u8; 32]"
+                }
+              ]
+            }
+          },
+          "path": [
+            "ink_env",
+            "types",
+            "AccountId"
+          ]
+        }
+      },
+      {
+        "id": 4,
+        "type": {
+          "def": {
+            "array": {
+              "len": 32,
+              "type": 5
+            }
+          }
+        }
+      },
+      {
+        "id": 5,
+        "type": {
+          "def": {
+            "primitive": "u8"
+          }
+        }
+      },
+      {
+        "id": 6,
+        "type": {
+          "def": {
+            "primitive": "str"
+          }
+        }
+      },
+      {
+        "id": 7,
+        "type": {
+          "def": {
+            "primitive": "u128"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "index": 0,
+                  "name": "InProgress"
+                },
+                {
+                  "index": 1,
+                  "name": "Finished"
+                },
+                {
+                  "index": 2,
+                  "name": "Cancelled"
+                }
+              ]
+            }
+          },
+          "path": [
+            "nft_alleblock",
+            "nft_alleblock",
+            "AuctionState"
+          ]
+        }
+      },
+      {
+        "id": 9,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "index": 0,
+                  "name": "None"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 3
+                    }
+                  ],
+                  "index": 1,
+                  "name": "Some"
+                }
+              ]
+            }
+          },
+          "params": [
+            {
+              "name": "T",
+              "type": 3
+            }
+          ],
+          "path": [
+            "Option"
+          ]
+        }
+      },
+      {
+        "id": 10,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "index": 0,
+                  "name": "None"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 11
+                    }
+                  ],
+                  "index": 1,
+                  "name": "Some"
+                }
+              ]
+            }
+          },
+          "params": [
+            {
+              "name": "T",
+              "type": 11
+            }
+          ],
+          "path": [
+            "Option"
+          ]
+        }
+      },
+      {
+        "id": 11,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "type": 5,
+                      "typeName": "u8"
+                    }
+                  ],
+                  "index": 0,
+                  "name": "U8"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 12,
+                      "typeName": "u16"
+                    }
+                  ],
+                  "index": 1,
+                  "name": "U16"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 13,
+                      "typeName": "u32"
+                    }
+                  ],
+                  "index": 2,
+                  "name": "U32"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 2,
+                      "typeName": "u64"
+                    }
+                  ],
+                  "index": 3,
+                  "name": "U64"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 7,
+                      "typeName": "u128"
+                    }
+                  ],
+                  "index": 4,
+                  "name": "U128"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 14,
+                      "typeName": "Vec<u8>"
+                    }
+                  ],
+                  "index": 5,
+                  "name": "Bytes"
+                }
+              ]
+            }
+          },
+          "path": [
+            "openbrush_contracts",
+            "traits",
+            "types",
+            "Id"
+          ]
+        }
+      },
+      {
+        "id": 12,
+        "type": {
+          "def": {
+            "primitive": "u16"
+          }
+        }
+      },
+      {
+        "id": 13,
+        "type": {
+          "def": {
+            "primitive": "u32"
+          }
+        }
+      },
+      {
+        "id": 14,
+        "type": {
+          "def": {
+            "sequence": {
+              "type": 5
+            }
+          }
+        }
+      },
+      {
+        "id": 15,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "type": 2
+                    }
+                  ],
+                  "index": 0,
+                  "name": "Ok"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 16
+                    }
+                  ],
+                  "index": 1,
+                  "name": "Err"
+                }
+              ]
+            }
+          },
+          "params": [
+            {
+              "name": "T",
+              "type": 2
+            },
+            {
+              "name": "E",
+              "type": 16
+            }
+          ],
+          "path": [
+            "Result"
+          ]
+        }
+      },
+      {
+        "id": 16,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "index": 0,
+                  "name": "TooLowBidError"
+                },
+                {
+                  "index": 1,
+                  "name": "TooLowFeeError"
+                },
+                {
+                  "index": 2,
+                  "name": "AfterFinishDateError"
+                },
+                {
+                  "index": 3,
+                  "name": "BeforeFinishDateError"
+                },
+                {
+                  "index": 4,
+                  "name": "AuctionNotInProgressError"
+                },
+                {
+                  "index": 5,
+                  "name": "NoSuchAuctionError"
+                },
+                {
+                  "index": 6,
+                  "name": "NotAnOwnerError"
+                },
+                {
+                  "index": 7,
+                  "name": "TransferError"
+                },
+                {
+                  "index": 8,
+                  "name": "NoNftAllowanceError"
+                },
+                {
+                  "index": 9,
+                  "name": "NftTransferError"
+                }
+              ]
+            }
+          },
+          "path": [
+            "nft_alleblock",
+            "nft_alleblock",
+            "Error"
+          ]
+        }
+      },
+      {
+        "id": 17,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "type": 18
+                    }
+                  ],
+                  "index": 0,
+                  "name": "Ok"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 16
+                    }
+                  ],
+                  "index": 1,
+                  "name": "Err"
+                }
+              ]
+            }
+          },
+          "params": [
+            {
+              "name": "T",
+              "type": 18
+            },
+            {
+              "name": "E",
+              "type": 16
+            }
+          ],
+          "path": [
+            "Result"
+          ]
+        }
+      },
+      {
+        "id": 18,
+        "type": {
+          "def": {
+            "tuple": []
+          }
+        }
+      },
+      {
+        "id": 19,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "type": 7
+                    }
+                  ],
+                  "index": 0,
+                  "name": "Ok"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 16
+                    }
+                  ],
+                  "index": 1,
+                  "name": "Err"
+                }
+              ]
+            }
+          },
+          "params": [
+            {
+              "name": "T",
+              "type": 7
+            },
+            {
+              "name": "E",
+              "type": 16
+            }
+          ],
+          "path": [
+            "Result"
+          ]
+        }
+      }
+    ]
+  }
+}
