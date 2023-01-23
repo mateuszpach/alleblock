@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0x7272ba929ca30f99a33547657a3f9b1296dbae1489089586f6dccc5aae09548b",
+    "hash": "0xf084d0cab4facdf1caa1fbbfdce41693e45c1c1adeb2585e3c01c84de241ca08",
     "language": "ink! 3.3.1",
     "compiler": "rustc 1.68.0-nightly"
   },
@@ -118,7 +118,7 @@
             " message used to create a brand new auction",
             " starting_bid -- lowest price at which the item can be sold (in the smallest chunk of currency, eg. picoTZERO)",
             " description -- description of item or service",
-            " duration -- duration of auction in seconds, after creating the auction, everyone can bid for <duration> seconds",
+            " duration -- duration of auction in miliseconds, after creating the auction, everyone can bid for <duration> seconds",
             " nft_contract -- account of the origin contract of the nft to be auctioned (None if not selling nft)",
             " token_id -- id of the token to be auctioned (None if not selling nft)",
             " Note: if you want to create auction with nft, you first need to allow auction contract to transfer it"
@@ -307,6 +307,22 @@
             "type": 3
           },
           "selector": "0x0422c457"
+        },
+        {
+          "args": [],
+          "docs": [
+            " get account of its nft storage"
+          ],
+          "label": "get_nft_storage",
+          "mutates": false,
+          "payable": false,
+          "returnType": {
+            "displayName": [
+              "AccountId"
+            ],
+            "type": 3
+          },
+          "selector": "0x78f4d114"
         }
       ]
     },

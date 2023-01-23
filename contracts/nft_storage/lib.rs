@@ -2,8 +2,6 @@
 
 use ink_lang as ink;
 
-pub use self::nft_storage::NftStorageRef;
-
 #[ink::contract]
 mod nft_storage {
     use openbrush::contracts::traits::psp34::Id;
@@ -41,6 +39,12 @@ mod nft_storage {
             } 
             self.owner = owner;
             return Ok(());
+        }
+
+        /// Get contracts owner
+        #[ink(message)]
+        pub fn get_owner(&self) -> AccountId {
+            return self.owner.clone();
         }
 
         /// transfer given token to given address

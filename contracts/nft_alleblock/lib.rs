@@ -375,6 +375,12 @@ mod nft_alleblock {
             return self.contract_owner.clone();
         }
 
+        /// get account of its nft storage
+        #[ink(message)]
+        pub fn get_nft_storage(&self) -> AccountId {
+            return self.nft_storage.clone();
+        }
+
 
         /// transfer nft to indicated address by nft storage
         /// call ransfer(&mut self, to: AccountId, nft_account: AccountId, nft_token: Id) -> core::result::Result<(), PSP34Error>

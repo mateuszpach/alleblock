@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0x2b61b700e9004fd09b0e79ad6789611fab22144ea8ee107139256be580e18223",
+    "hash": "0x544cd755fd4c043720a2cae58d683d1927040efea1b1e368c5e5fea763e1d235",
     "language": "ink! 3.3.1",
     "compiler": "rustc 1.68.0-nightly"
   },
@@ -52,6 +52,22 @@
             "type": 3
           },
           "selector": "0x367facd6"
+        },
+        {
+          "args": [],
+          "docs": [
+            " Get contracts owner"
+          ],
+          "label": "get_owner",
+          "mutates": false,
+          "payable": false,
+          "returnType": {
+            "displayName": [
+              "AccountId"
+            ],
+            "type": 0
+          },
+          "selector": "0x07fcd0b1"
         },
         {
           "args": [
