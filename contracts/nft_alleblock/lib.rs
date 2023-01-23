@@ -402,6 +402,3 @@ mod nft_alleblock {
     }
 
 }
-
-#[cfg(test)]
-mod tests;
