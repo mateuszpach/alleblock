@@ -9,12 +9,12 @@ mod nft_storage {
     use openbrush::contracts::traits::psp34::Id;
     use openbrush::contracts::psp34::PSP34Error;
     use openbrush::contracts::traits::psp34::PSP34Ref;
+    use ink_prelude::string::{ToString};
 
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Error {
-        NotAnOwnerError,
-        NftTransferError(PSP34Error)
+        NotAnOwnerError
     }
 
     #[ink(storage)]
@@ -45,15 +45,11 @@ mod nft_storage {
 
         /// transfer given token to given address
         #[ink(message)]
-        pub fn transfer(&mut self, to: AccountId, nft_account: AccountId, nft_token: Id) -> Result<()> { 
+        pub fn transfer(&mut self, to: AccountId, nft_account: AccountId, nft_token: Id) ->core::result::Result<(), PSP34Error> { 
             if self.env().caller() != self.owner {
-                return Err(Error::NotAnOwnerError)
+                return Err(PSP34Error::Custom("NotAnOwnerError".to_string()))
             } 
-            let result = PSP34Ref::transfer(&nft_account, to, nft_token, [0x0].to_vec());
-            if result.is_err() {
-                return Err(Error::NftTransferError(result.unwrap_err()))
-            }
-            return Ok(())
+            return PSP34Ref::transfer(&nft_account, to, nft_token, [0x0].to_vec());
         }
     }
 }

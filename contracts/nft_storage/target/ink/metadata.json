@@ -1,6 +1,6 @@
 {
   "source": {
-    "hash": "0xe6ebeee1603dbe614bad1654c7f30e70ea00b5ae4641af8526760fba1e531088",
+    "hash": "0x2b61b700e9004fd09b0e79ad6789611fab22144ea8ee107139256be580e18223",
     "language": "ink! 3.3.1",
     "compiler": "rustc 1.68.0-nightly"
   },
@@ -79,7 +79,7 @@
                 "displayName": [
                   "Id"
                 ],
-                "type": 8
+                "type": 6
               }
             }
           ],
@@ -91,9 +91,11 @@
           "payable": false,
           "returnType": {
             "displayName": [
+              "core",
+              "result",
               "Result"
             ],
-            "type": 3
+            "type": 12
           },
           "selector": "0x84a15da1"
         }
@@ -213,16 +215,6 @@
                 {
                   "index": 0,
                   "name": "NotAnOwnerError"
-                },
-                {
-                  "fields": [
-                    {
-                      "type": 6,
-                      "typeName": "PSP34Error"
-                    }
-                  ],
-                  "index": 1,
-                  "name": "NftTransferError"
                 }
               ]
             }
@@ -243,7 +235,168 @@
                 {
                   "fields": [
                     {
+                      "type": 2,
+                      "typeName": "u8"
+                    }
+                  ],
+                  "index": 0,
+                  "name": "U8"
+                },
+                {
+                  "fields": [
+                    {
                       "type": 7,
+                      "typeName": "u16"
+                    }
+                  ],
+                  "index": 1,
+                  "name": "U16"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 8,
+                      "typeName": "u32"
+                    }
+                  ],
+                  "index": 2,
+                  "name": "U32"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 9,
+                      "typeName": "u64"
+                    }
+                  ],
+                  "index": 3,
+                  "name": "U64"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 10,
+                      "typeName": "u128"
+                    }
+                  ],
+                  "index": 4,
+                  "name": "U128"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 11,
+                      "typeName": "Vec<u8>"
+                    }
+                  ],
+                  "index": 5,
+                  "name": "Bytes"
+                }
+              ]
+            }
+          },
+          "path": [
+            "openbrush_contracts",
+            "traits",
+            "types",
+            "Id"
+          ]
+        }
+      },
+      {
+        "id": 7,
+        "type": {
+          "def": {
+            "primitive": "u16"
+          }
+        }
+      },
+      {
+        "id": 8,
+        "type": {
+          "def": {
+            "primitive": "u32"
+          }
+        }
+      },
+      {
+        "id": 9,
+        "type": {
+          "def": {
+            "primitive": "u64"
+          }
+        }
+      },
+      {
+        "id": 10,
+        "type": {
+          "def": {
+            "primitive": "u128"
+          }
+        }
+      },
+      {
+        "id": 11,
+        "type": {
+          "def": {
+            "sequence": {
+              "type": 2
+            }
+          }
+        }
+      },
+      {
+        "id": 12,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "type": 4
+                    }
+                  ],
+                  "index": 0,
+                  "name": "Ok"
+                },
+                {
+                  "fields": [
+                    {
+                      "type": 13
+                    }
+                  ],
+                  "index": 1,
+                  "name": "Err"
+                }
+              ]
+            }
+          },
+          "params": [
+            {
+              "name": "T",
+              "type": 4
+            },
+            {
+              "name": "E",
+              "type": 13
+            }
+          ],
+          "path": [
+            "Result"
+          ]
+        }
+      },
+      {
+        "id": 13,
+        "type": {
+          "def": {
+            "variant": {
+              "variants": [
+                {
+                  "fields": [
+                    {
+                      "type": 14,
                       "typeName": "String"
                     }
                   ],
@@ -269,7 +422,7 @@
                 {
                   "fields": [
                     {
-                      "type": 7,
+                      "type": 14,
                       "typeName": "String"
                     }
                   ],
@@ -289,129 +442,10 @@
         }
       },
       {
-        "id": 7,
+        "id": 14,
         "type": {
           "def": {
             "primitive": "str"
-          }
-        }
-      },
-      {
-        "id": 8,
-        "type": {
-          "def": {
-            "variant": {
-              "variants": [
-                {
-                  "fields": [
-                    {
-                      "type": 2,
-                      "typeName": "u8"
-                    }
-                  ],
-                  "index": 0,
-                  "name": "U8"
-                },
-                {
-                  "fields": [
-                    {
-                      "type": 9,
-                      "typeName": "u16"
-                    }
-                  ],
-                  "index": 1,
-                  "name": "U16"
-                },
-                {
-                  "fields": [
-                    {
-                      "type": 10,
-                      "typeName": "u32"
-                    }
-                  ],
-                  "index": 2,
-                  "name": "U32"
-                },
-                {
-                  "fields": [
-                    {
-                      "type": 11,
-                      "typeName": "u64"
-                    }
-                  ],
-                  "index": 3,
-                  "name": "U64"
-                },
-                {
-                  "fields": [
-                    {
-                      "type": 12,
-                      "typeName": "u128"
-                    }
-                  ],
-                  "index": 4,
-                  "name": "U128"
-                },
-                {
-                  "fields": [
-                    {
-                      "type": 13,
-                      "typeName": "Vec<u8>"
-                    }
-                  ],
-                  "index": 5,
-                  "name": "Bytes"
-                }
-              ]
-            }
-          },
-          "path": [
-            "openbrush_contracts",
-            "traits",
-            "types",
-            "Id"
-          ]
-        }
-      },
-      {
-        "id": 9,
-        "type": {
-          "def": {
-            "primitive": "u16"
-          }
-        }
-      },
-      {
-        "id": 10,
-        "type": {
-          "def": {
-            "primitive": "u32"
-          }
-        }
-      },
-      {
-        "id": 11,
-        "type": {
-          "def": {
-            "primitive": "u64"
-          }
-        }
-      },
-      {
-        "id": 12,
-        "type": {
-          "def": {
-            "primitive": "u128"
-          }
-        }
-      },
-      {
-        "id": 13,
-        "type": {
-          "def": {
-            "sequence": {
-              "type": 2
-            }
           }
         }
       }
