@@ -80,7 +80,7 @@ mod alleblock {
         /// message used to create a brand new auction
         /// starting_bid -- lowest price at which the item can be sold (in the smallest chunk of currency, eg. picoTZERO)
         /// description -- description of item or service
-        /// duration -- duration of auction in seconds, after creating the auction, everyone can bid for <duration> seconds
+        /// duration -- duration of auction in miliseconds, after creating the auction, everyone can bid for <duration> seconds
         #[ink(message, payable)]
         pub fn create_auction(&mut self, starting_bid: u128, description: String, duration: u64) -> Result<u64> {
             let transferred_value = self.env().transferred_value();

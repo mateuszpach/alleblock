@@ -96,7 +96,7 @@ mod nft_alleblock {
         /// message used to create a brand new auction
         /// starting_bid -- lowest price at which the item can be sold (in the smallest chunk of currency, eg. picoTZERO)
         /// description -- description of item or service
-        /// duration -- duration of auction in seconds, after creating the auction, everyone can bid for <duration> seconds
+        /// duration -- duration of auction in miliseconds, after creating the auction, everyone can bid for <duration> seconds
         /// nft_contract -- account of the origin contract of the nft to be auctioned (None if not selling nft)
         /// token_id -- id of the token to be auctioned (None if not selling nft)
         /// Note: if you want to create auction with nft, you first need to allow auction contract to transfer it
