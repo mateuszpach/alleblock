@@ -20,17 +20,26 @@
     <a href="./start_auction.html">Start auction</a>
     <a href="./owned_auctions.html">Owned auctions</a>
 
-    <form action="javascript:void(0);" onsubmit="setAccount()">
-        <br><br>
-        <label for="address">Address:</label>
-        <input type="text" id="address" name="address"><br><br>
-        <label for="key">Private key:</label>
-        <input type="text" id="key" name="key"><br><br>
-        <input type="submit" value="Save">
-    </form>
+    <table>
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Description</th>
+                <th>Started</th>
+                <th>Ends</th>
+                <th>Starting bid</th>
+                <th>Highest bid</th>
+                <th>Highest bidder</th>
+                <th>State</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
 
     <script type="text/javascript">
-        window.onload = showSavedAccount();
+        window.onload = showOwnedAuctions();
     </script>
 </body>
 

@@ -16,7 +16,14 @@ fs.readFile('./metadata.json', (err, data) => {
 const port = 8080;
 const provider = new WsProvider('wss://ws-smartnet.test.azero.dev');
 const keyring = new Keyring({ type: 'sr25519' });
-const contractAddr = '5C5LbckqB4YTBpt1EKLQqqBNbiSc2AzZ2Fje3ccbeRLswsmX';
+const contractAddr = '5GeDRM9yAHJxYgfs9WLfvy2G1N2LPYZVqwhmDYJ6b6noUWVr';
+
+app.use(function(req, res, next) {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, PUT, POST");
+    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    next();
+});
 
 let api;
 let contract;
@@ -38,16 +45,32 @@ async function sendRes(res, result) {
         return res.status(400).send(internalError);
     }
 
-    return res.status(200).send(result);
+    return res.status(201).send(result);
 }
 
-async function createAuction(res, privateKey, startingPrice, description, duration, gasLimit) {
+async function createAuction(res, privateKey, startingBid, description, duration, gasLimit) {
     const owner = keyring.createFromUri(privateKey);
 
     const { output } = await contract.query.getCreateAuctionFee(0, {});
     const createAuctionFee = output;
 
-    return contract.tx.createAuction({ value: createAuctionFee, gasLimit: gasLimit }, startingPrice, description, duration)
+    return contract.tx.createAuction({ value: createAuctionFee, gasLimit: gasLimit }, startingBid, description, duration, null, null)
+        .signAndSend(owner, result => {
+            if (result.status.isFinalized) {
+                sendRes(res, result);
+            }
+        });
+};
+
+async function createNftAuction(res, privateKey, startingBid, description, duration, gasLimit, nftContract, nftId) {
+    const owner = keyring.createFromUri(privateKey);
+
+    const { output } = await contract.query.getCreateAuctionFee(0, {});
+    const createAuctionFee = output;
+
+    return contract.tx.createAuction({ value: createAuctionFee, gasLimit: gasLimit }, startingBid, description, duration, nftContract, {
+            u8: nftId
+        })
         .signAndSend(owner, result => {
             if (result.status.isFinalized) {
                 sendRes(res, result);
@@ -80,11 +103,10 @@ async function finishAuction(res, privateKey, auctionId, gasLimit) {
 async function cancelAuction(res, privateKey, auctionId, gasLimit) {
     const owner = keyring.createFromUri(privateKey);
 
-    const { output } = await contract.query.getCreateAuctionFee(0, {});
-    const finalizeFee = output;
+    const { output } = await contract.query.getFinalizeFeeOf(0, {}, auctionId);
+    const finalizeFee = output.toHuman().Ok;
 
-    // TODO: change const value to finalize fee
-    return contract.tx.cancelAuction({ value: 10000000, gasLimit: gasLimit }, auctionId)
+    return contract.tx.cancelAuction({ value: finalizeFee, gasLimit: gasLimit }, auctionId)
         .signAndSend(owner, result => {
             if (result.status.isFinalized) {
                 sendRes(res, result);
@@ -97,12 +119,17 @@ async function getAuctions(res) {
     res.status(200).send(output.toHuman());
 };
 
+async function lastTimestamp(res) {
+    const now = await api.query.timestamp.now();
+    res.status(200).send(now);
+};
 
-app.get('/createauction', async(req, res) => {
+
+app.post('/createauction', async(req, res) => {
     await createAuction(
         res,
         req.query.privateKey,
-        req.query.startingPrice,
+        req.query.startingBid,
         req.query.description,
         req.query.duration,
         req.query.gasLimit
@@ -111,7 +138,23 @@ app.get('/createauction', async(req, res) => {
     });
 });
 
-app.get('/bid', async(req, res) => {
+app.post('/createnftauction', async(req, res) => {
+    await createNftAuction(
+        res,
+        req.query.privateKey,
+        req.query.startingBid,
+        req.query.description,
+        req.query.duration,
+        req.query.gasLimit,
+        req.query.nftContract,
+        req.query.nftId
+    ).catch((e) => {
+        res.status(400).send(e.toString());
+    });
+});
+
+app.post('/bid', async(req, res) => {
+    console.log(req.query);
     await bid(
         res,
         req.query.privateKey,
@@ -123,7 +166,7 @@ app.get('/bid', async(req, res) => {
     });
 });
 
-app.get('/finishauction', async(req, res) => {
+app.post('/finishauction', async(req, res) => {
     await finishAuction(
         res,
         req.query.privateKey,
@@ -134,7 +177,7 @@ app.get('/finishauction', async(req, res) => {
     });
 });
 
-app.get('/cancelauction', async(req, res) => {
+app.post('/cancelauction', async(req, res) => {
     await cancelAuction(
         res,
         req.query.privateKey,
@@ -153,6 +196,15 @@ app.get('/getauctions', async(req, res) => {
     });
 });
 
+app.get('/lasttimestamp', async(req, res) => {
+    await lastTimestamp(
+        res
+    ).catch((e) => {
+        res.status(400).send(e.toString());
+    });
+});
+
+
 // Example queries for private key 0x12d797ce064de04a047241cfcbde08033482a74be3a076fb1c32ffb33f01373c
 // http://127.0.0.1:8080/createauction?privateKey=0x12d797ce064de04a047241cfcbde08033482a74be3a076fb1c32ffb33f01373c&startingPrice=123&description=haha&duration=123&gasLimit=10000000000
 // http://127.0.0.1:8080/bid?privateKey=0x12d797ce064de04a047241cfcbde08033482a74be3a076fb1c32ffb33f01373c&auctionId=<INSERT ID>&bidPrice=123&gasLimit=10000000000
@@ -160,3 +212,4 @@ app.get('/getauctions', async(req, res) => {
 // http://127.0.0.1:8080/cancelauction?privateKey=0x12d797ce064de04a047241cfcbde08033482a74be3a076fb1c32ffb33f01373c&auctionId=<INSERT ID>&gasLimit=10000000000
 // http://127.0.0.1:8080/getauctionson?privateKey=0x12d797ce064de04a047241cfcbde08033482a74be3a076fb1c32ffb33f01373c&auctionId=<INSERT ID>&gasLimit=10000000000
 // http://127.0.0.1:8080/getauctions
+// 5GTcFeiWRcEFSZ3YHZfjfmF3UTkdsujqNCQ87WSDyULD5d2o
