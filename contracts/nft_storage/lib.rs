@@ -13,12 +13,12 @@ mod nft_storage {
     #[derive(Debug, PartialEq, Eq, scale::Encode, scale::Decode)]
     #[cfg_attr(feature = "std", derive(scale_info::TypeInfo))]
     pub enum Error {
-        NotACreatorError,
+        NotAnOwnerError,
+        NftTransferError(PSP34Error)
     }
 
     #[ink(storage)]
     pub struct NftStorage {
-        creator: AccountId,
         owner: AccountId,
     }
 
@@ -29,7 +29,6 @@ mod nft_storage {
         #[ink(constructor)]
         pub fn new() -> Self {
             Self { 
-                creator: Self::env().caller(),
                 owner: Self::env().caller(),
             }
         }
@@ -37,8 +36,8 @@ mod nft_storage {
         /// Set owner of this contract
         #[ink(message)]
         pub fn set_owner(&mut self, owner: AccountId) -> Result<()> {
-            if self.env().caller() != self.creator && self.env().caller() != self.owner {
-                return Err(Error::NotACreatorError)
+            if self.env().caller() != self.owner {
+                return Err(Error::NotAnOwnerError)
             } 
             self.owner = owner;
             return Ok(());
@@ -46,8 +45,15 @@ mod nft_storage {
 
         /// transfer given token to given address
         #[ink(message)]
-        pub fn transfer(&mut self, to: AccountId, nft_account: AccountId, nft_token: Id) -> core::result::Result<(), PSP34Error> { 
-            return PSP34Ref::transfer(&nft_account, to, nft_token, [0x0].to_vec());
+        pub fn transfer(&mut self, to: AccountId, nft_account: AccountId, nft_token: Id) -> Result<()> { 
+            if self.env().caller() != self.owner {
+                return Err(Error::NotAnOwnerError)
+            } 
+            let result = PSP34Ref::transfer(&nft_account, to, nft_token, [0x0].to_vec());
+            if result.is_err() {
+                return Err(Error::NftTransferError(result.unwrap_err()))
+            }
+            return Ok(())
         }
     }
 }
